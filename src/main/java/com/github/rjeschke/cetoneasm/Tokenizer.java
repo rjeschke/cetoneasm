@@ -1,0 +1,537 @@
+package com.github.rjeschke.cetoneasm;
+
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+
+import com.github.rjeschke.cetoneasm.Tokenizer.Token.Type;
+
+public class Tokenizer
+{
+    public static class FileLocation
+    {
+        public final String filename;
+        public final int    line;
+
+        public FileLocation(final String filename, final int line)
+        {
+            this.filename = filename;
+            this.line = line;
+        }
+
+        @Override
+        public String toString()
+        {
+            return this.filename + ":" + this.line;
+        }
+    }
+
+    public static class Token
+    {
+        public enum Type
+        {
+            EOF,
+            META,
+            WORD,
+            OPCODE,
+            LABEL,
+            STRING,
+            PC,
+            IMMEDIATE,
+            NUMBER,
+            ASSIGN,
+            EQUAL,
+            PLUS,
+            MINUS,
+            MUL,
+            DIV,
+            AND,
+            OR,
+            XOR,
+            NOT,
+            NOT_EQUAL,
+            NEG,
+            LESS_THAN,
+            SHIFT_LEFT,
+            GREATER_THAN,
+            SHIFT_RIGHT
+        }
+
+        private final Type         type;
+        private final FileLocation location;
+        private String             stringValue;
+        private long               longValue = 0;
+
+        private Token(final Type type, final FileLocation location)
+        {
+            this.type = type;
+            this.location = location;
+        }
+
+        private static Token tGeneric(final Tokenizer t, final Type type)
+        {
+            return new Token(type, t.getLocation());
+        }
+
+        private static Token genString(final Tokenizer t, final Type type, final String value)
+        {
+            final Token tok = new Token(type, t.getLocation());
+            tok.stringValue = value;
+            return tok;
+        }
+
+        private static Token tMETA(final Tokenizer t, final String value)
+        {
+            return genString(t, Type.META, value);
+        }
+
+        private static Token tWORD(final Tokenizer t, final String value)
+        {
+            return genString(t, Type.WORD, value);
+        }
+
+        private static Token tOPCODE(final Tokenizer t, final String value)
+        {
+            return genString(t, Type.OPCODE, value);
+        }
+
+        private static Token tLABEL(final Tokenizer t, final String value)
+        {
+            return genString(t, Type.LABEL, value);
+        }
+
+        private static Token tSTRING(final Tokenizer t, final String value)
+        {
+            return genString(t, Type.STRING, value);
+        }
+
+        private static Token tNUMBER(final Tokenizer t, final long value)
+        {
+            final Token tok = new Token(Type.NUMBER, t.getLocation());
+            tok.longValue = value;
+            return tok;
+        }
+
+        public Type getType()
+        {
+            return this.type;
+        }
+
+        public FileLocation getLocation()
+        {
+            return this.location;
+        }
+
+        public String getStringValue()
+        {
+            return this.stringValue;
+        }
+
+        public long getLongValue()
+        {
+            return this.longValue;
+        }
+
+        @Override
+        public String toString()
+        {
+            final StringBuilder sb = new StringBuilder();
+            sb.append(this.type.toString());
+            switch (this.type)
+            {
+            case WORD:
+            case LABEL:
+            case META:
+            case STRING:
+            case OPCODE:
+                sb.append(':');
+                sb.append(this.stringValue);
+                break;
+            case NUMBER:
+                sb.append(':');
+                sb.append(String.format("$%x,%d", this.longValue, this.longValue));
+                break;
+            default:
+                break;
+            }
+            return sb.toString();
+        }
+    }
+
+    public static class TokenizerException extends Exception
+    {
+        private static final long  serialVersionUID = -3770986600420935401L;
+        private final FileLocation location;
+
+        public TokenizerException(final Tokenizer tokenizer, final String message)
+        {
+            super(message);
+            this.location = tokenizer.getLocation();
+        }
+
+        public TokenizerException(final Tokenizer tokenizer, final String message, final Throwable cause)
+        {
+            super(message, cause);
+            this.location = tokenizer.getLocation();
+        }
+
+        public FileLocation getLocation()
+        {
+            return this.location;
+        }
+    }
+
+    private final String        filename;
+    private int                 lineNo     = 1;
+    private BufferedReader      reader;
+    private final Config        config;
+    private final int[]         lookAhead  = new int[16];
+    private int                 aheadRead  = 0;
+    private int                 aheadWrite = 0;
+    private int                 aheadAvail = 0;
+    private final StringBuilder sb         = new StringBuilder();
+
+    public Tokenizer(final Config config, final String filename)
+    {
+        this.config = config;
+        this.filename = filename;
+    }
+
+    public void open(final InputStream instream) throws TokenizerException
+    {
+        try
+        {
+            this.reader = new BufferedReader(new InputStreamReader(instream, this.config.fileEncoding));
+            this.fill();
+        }
+        catch (final IOException e)
+        {
+            throw new TokenizerException(this, "Failed to open stream: " + e.getMessage(), e);
+        }
+    }
+
+    public void open() throws TokenizerException
+    {
+        try
+        {
+            this.open(new FileInputStream(this.filename));
+        }
+        catch (final IOException e)
+        {
+            throw new TokenizerException(this, "Failed to open file '" + this.filename + "': " + e.getMessage(), e);
+        }
+    }
+
+    private Token readString() throws TokenizerException, IOException
+    {
+        this.sb.setLength(0);
+        this.consume();
+        while (this.peek() != '"' && this.peek() != -1)
+        {
+            if (this.peek() == '\\')
+            {
+                switch (this.peek(1))
+                {
+                case 'r':
+                    this.sb.append('\r');
+                    break;
+                case 'n':
+                    this.sb.append('\n');
+                    break;
+                case 't':
+                    this.sb.append('\t');
+                    break;
+                case '\\':
+                    this.sb.append('\\');
+                    break;
+                case '"':
+                    this.sb.append('"');
+                    break;
+                default:
+                    throw new TokenizerException(this, "Illegal escape sequence '\\" + ((char)this.peek(1)) + "'");
+                }
+                this.consume(2);
+            }
+            else
+            {
+                this.sb.append((char)this.consume());
+            }
+        }
+        if (this.peek() == -1)
+        {
+            throw new TokenizerException(this, "Open string");
+        }
+        this.consume();
+        return Token.tSTRING(this, this.sb.toString());
+    }
+
+    private Token readWord(final Token.Type type) throws TokenizerException, IOException
+    {
+        this.sb.setLength(0);
+        switch (type)
+        {
+        case META:
+            this.consume();
+            break;
+        default:
+            break;
+        }
+        for (;;)
+        {
+            final int ch = this.peek();
+            if (Character.isLetterOrDigit((char)ch) || ch == '_')
+            {
+                this.sb.append((char)ch);
+            }
+            else
+            {
+                break;
+            }
+            this.consume();
+        }
+
+        final String str = this.sb.toString().toUpperCase();
+
+        if (type == Type.META)
+        {
+            if (str.isEmpty())
+            {
+                throw new TokenizerException(this, "Empty META");
+            }
+            return Token.tMETA(this, str);
+        }
+        if (this.peek() == ':')
+        {
+            this.consume();
+            return Token.tLABEL(this, str);
+        }
+        if (Opcodes.BY_NAME.containsKey(str))
+        {
+            return Token.tOPCODE(this, str);
+        }
+        return Token.tWORD(this, str);
+    }
+
+    private static boolean isBaseNChar(final int ch, final int base)
+    {
+        if (base <= 10)
+        {
+            return ch >= '0' && ch <= ('0' + base - 1);
+        }
+        if (Character.isLetter((char)ch))
+        {
+            final int test = Character.toLowerCase((char)ch) - 'a';
+            return test >= 0 && test <= (base - 11);
+        }
+        return Character.isDigit((char)ch);
+    }
+
+    private Token readNumber() throws IOException, TokenizerException
+    {
+        int base = 10;
+        if (this.peek() == '$')
+        {
+            this.consume();
+            base = 16;
+        }
+        else
+        {
+            if (this.peek() == '0' && Character.isLetter((char)this.peek(1)))
+            {
+                switch (this.peek(1))
+                {
+                case 'x':
+                case 'X':
+                    base = 16;
+                    this.consume(2);
+                    break;
+                case 'o':
+                case 'O':
+                    base = 8;
+                    this.consume(2);
+                    break;
+                case 'b':
+                case 'B':
+                    base = 2;
+                    this.consume(2);
+                    break;
+                }
+            }
+        }
+        this.sb.setLength(0);
+        while (isBaseNChar(this.peek(), base))
+        {
+            this.sb.append((char)this.consume());
+        }
+        if (this.sb.length() == 0)
+        {
+            throw new TokenizerException(this, "Syntax error, number format");
+        }
+        return Token.tNUMBER(this, Integer.parseInt(this.sb.toString(), base));
+    }
+
+    public FileLocation getLocation()
+    {
+        return new FileLocation(this.filename, this.lineNo);
+    }
+
+    private void fill() throws IOException
+    {
+        for (int i = 0; i < this.lookAhead.length - this.aheadAvail; i++)
+        {
+            this.lookAhead[this.aheadWrite] = this.reader.read();
+            this.aheadWrite = (this.aheadWrite + 1) % this.lookAhead.length;
+        }
+        this.aheadAvail = this.lookAhead.length;
+    }
+
+    private int peek(final int offset) throws IOException, TokenizerException
+    {
+        if (offset > this.lookAhead.length)
+        {
+            throw new TokenizerException(this, "Internal error, offset > lookAhead.length");
+        }
+        if (offset >= this.aheadAvail)
+        {
+            this.fill();
+        }
+        return this.lookAhead[(this.aheadRead + offset) % this.lookAhead.length];
+    }
+
+    private int peek() throws IOException, TokenizerException
+    {
+        return this.peek(0);
+    }
+
+    private int consume() throws TokenizerException, IOException
+    {
+        final int ch = this.peek();
+        this.consume(1);
+        return ch;
+    }
+
+    private void consume(final int amount) throws TokenizerException
+    {
+        this.aheadRead = (this.aheadRead + amount) % this.lookAhead.length;
+        this.aheadAvail -= amount;
+        if (this.aheadAvail < 0)
+        {
+            throw new TokenizerException(this, "Illegal internal state, aheadAvail < 0");
+        }
+    }
+
+    public Token read() throws TokenizerException
+    {
+        try
+        {
+            for (;;)
+            {
+                switch (this.peek())
+                {
+                case -1:
+                    return Token.tGeneric(this, Type.EOF);
+                case '\n':
+                    this.lineNo++;
+                case ' ':
+                case '\t':
+                case '\r':
+                    this.consume();
+                    continue;
+                case ';':
+                    while (this.peek() != '\n' && this.peek() != -1)
+                    {
+                        this.consume();
+                    }
+                    continue;
+                case '.':
+                    return this.readWord(Type.META);
+                case '@':
+                    this.consume();
+                    return Token.tGeneric(this, Type.PC);
+                case '=':
+                    this.consume();
+                    if (this.peek() == '=')
+                    {
+                        this.consume();
+                        return Token.tGeneric(this, Type.EQUAL);
+                    }
+                    return Token.tGeneric(this, Type.ASSIGN);
+                case '#':
+                    this.consume();
+                    return Token.tGeneric(this, Type.IMMEDIATE);
+                case '+':
+                    this.consume();
+                    return Token.tGeneric(this, Type.PLUS);
+                case '-':
+                    this.consume();
+                    return Token.tGeneric(this, Type.MINUS);
+                case '*':
+                    this.consume();
+                    return Token.tGeneric(this, Type.MUL);
+                case '/':
+                    this.consume();
+                    return Token.tGeneric(this, Type.DIV);
+                case '&':
+                    this.consume();
+                    return Token.tGeneric(this, Type.AND);
+                case '|':
+                    this.consume();
+                    return Token.tGeneric(this, Type.OR);
+                case '^':
+                    this.consume();
+                    return Token.tGeneric(this, Type.XOR);
+                case '!':
+                    this.consume();
+                    if (this.peek() == '=')
+                    {
+                        this.consume();
+                        return Token.tGeneric(this, Type.NOT_EQUAL);
+                    }
+                    return Token.tGeneric(this, Type.NOT);
+                case '~':
+                    this.consume();
+                    return Token.tGeneric(this, Type.NEG);
+                case '<':
+                    this.consume();
+                    if (this.peek() == '<')
+                    {
+                        this.consume();
+                        return Token.tGeneric(this, Type.SHIFT_LEFT);
+                    }
+                    return Token.tGeneric(this, Type.LESS_THAN);
+                case '>':
+                    this.consume();
+                    if (this.peek() == '>')
+                    {
+                        this.consume();
+                        return Token.tGeneric(this, Type.SHIFT_RIGHT);
+                    }
+                    return Token.tGeneric(this, Type.GREATER_THAN);
+                case ':':
+                    this.consume();
+                    return Token.tLABEL(this, "");
+                case '$':
+                    return this.readNumber();
+                case '"':
+                    return this.readString();
+                default:
+                    if (Character.isLetter((char)this.peek()))
+                    {
+                        return this.readWord(Type.WORD);
+                    }
+                    if (Character.isDigit((char)this.peek()))
+                    {
+                        return this.readNumber();
+                    }
+                    throw new TokenizerException(this, "Illegal character: '" + ((char)this.peek()) + "'");
+                }
+            }
+        }
+        catch (final IOException e)
+        {
+            throw new TokenizerException(this, "IO error: " + e.getMessage(), e);
+        }
+    }
+}

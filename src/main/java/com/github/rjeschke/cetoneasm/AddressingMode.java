@@ -1,6 +1,6 @@
 package com.github.rjeschke.cetoneasm;
 
-public enum AddressingModes
+public enum AddressingMode
 {
     IMPLIED, // NOP, ASL
     RELATIVE, // BNE $ab

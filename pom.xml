@@ -81,6 +81,11 @@
   </build>
 
   <dependencies>
+    <dependency>
+      <groupId>com.github.rjeschke</groupId>
+      <artifactId>neetutils-base</artifactId>
+      <version>0.2-SNAPSHOT</version>
+    </dependency>
   </dependencies>
 
 </project>
