@@ -17,11 +17,9 @@ import com.github.rjeschke.cetoneasm.actions.UnaryOperatorAction;
 public class Parser
 {
     private final List<Token>  tokens;
-    private final List<Action> actions       = new ArrayList<Action>();
-    private int                position      = 0;
-    private final int[]        positionStack = new int[1024];
-    private int                positionSp    = 0;
-    private final Runtime      evalRuntime   = new Runtime();
+    private final List<Action> actions     = new ArrayList<Action>();
+    private int                position    = 0;
+    private final Runtime      evalRuntime = new Runtime();
 
     private Parser(final List<Token> tokens)
     {
@@ -46,24 +44,6 @@ public class Parser
     public static List<Action> parse(final List<Token> tokens) throws AssemblerException
     {
         return new Parser(tokens).parse();
-    }
-
-    private void pushPosition() throws AssemblerException
-    {
-        if (this.positionSp == this.positionStack.length)
-        {
-            throw new AssemblerException(this.peek().getLocation(), "Internal position stack overflow");
-        }
-        this.positionStack[this.positionSp++] = this.position;
-    }
-
-    private void popPosition() throws AssemblerException
-    {
-        if (this.positionSp == 0)
-        {
-            throw new AssemblerException(this.peek().getLocation(), "Internal position stack underrun");
-        }
-        this.position = this.positionStack[--this.positionSp];
     }
 
     private Token peek(final int offset)
