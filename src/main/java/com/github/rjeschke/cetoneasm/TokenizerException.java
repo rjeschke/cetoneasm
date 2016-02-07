@@ -16,19 +16,25 @@
 
 package com.github.rjeschke.cetoneasm;
 
-public enum AddressingMode
+public class TokenizerException extends Exception
 {
-    IMPLIED, // NOP, ASL
-    RELATIVE, // BNE $ab
-    IMMEDIATE, // LDA #$ab
-    ABSOLUTE, // LDA $abcd
-    ABSOLUTE_X, // LDA $abcd,X
-    ABSOLUTE_Y, // LDA $abcd,Y
-    ZEROPAGE, // LDA $ab
-    ZEROPAGE_X, // LDA $ab,X
-    ZEROPAGE_Y, // LDA $ab,Y
-    INDIRECT, // JMP ($abcd)
-    INDEXED_INDIRECT, // LDA ($ab),Y
-    INDIRECT_INDEXED, // LDA ($ab,X)
-    ILL
+    private static final long  serialVersionUID = -3770986600420935401L;
+    private final FileLocation location;
+
+    public TokenizerException(final Tokenizer tokenizer, final String message)
+    {
+        super(message);
+        this.location = tokenizer.getLocation();
+    }
+
+    public TokenizerException(final Tokenizer tokenizer, final String message, final Throwable cause)
+    {
+        super(message, cause);
+        this.location = tokenizer.getLocation();
+    }
+
+    public FileLocation getLocation()
+    {
+        return this.location;
+    }
 }

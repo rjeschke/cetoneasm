@@ -16,19 +16,19 @@
 
 package com.github.rjeschke.cetoneasm;
 
-public enum AddressingMode
+public class Variable
 {
-    IMPLIED, // NOP, ASL
-    RELATIVE, // BNE $ab
-    IMMEDIATE, // LDA #$ab
-    ABSOLUTE, // LDA $abcd
-    ABSOLUTE_X, // LDA $abcd,X
-    ABSOLUTE_Y, // LDA $abcd,Y
-    ZEROPAGE, // LDA $ab
-    ZEROPAGE_X, // LDA $ab,X
-    ZEROPAGE_Y, // LDA $ab,Y
-    INDIRECT, // JMP ($abcd)
-    INDEXED_INDIRECT, // LDA ($ab),Y
-    INDIRECT_INDEXED, // LDA ($ab,X)
-    ILL
+    public long    value       = 0;
+    public boolean initialized = false;
+
+    public Variable()
+    {
+
+    }
+
+    public Variable(final long value)
+    {
+        this.value = value;
+        this.initialized = true;
+    }
 }

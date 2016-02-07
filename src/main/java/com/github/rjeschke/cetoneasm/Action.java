@@ -16,19 +16,29 @@
 
 package com.github.rjeschke.cetoneasm;
 
-public enum AddressingMode
+public abstract class Action
 {
-    IMPLIED, // NOP, ASL
-    RELATIVE, // BNE $ab
-    IMMEDIATE, // LDA #$ab
-    ABSOLUTE, // LDA $abcd
-    ABSOLUTE_X, // LDA $abcd,X
-    ABSOLUTE_Y, // LDA $abcd,Y
-    ZEROPAGE, // LDA $ab
-    ZEROPAGE_X, // LDA $ab,X
-    ZEROPAGE_Y, // LDA $ab,Y
-    INDIRECT, // JMP ($abcd)
-    INDEXED_INDIRECT, // LDA ($ab),Y
-    INDIRECT_INDEXED, // LDA ($ab,X)
-    ILL
+    protected final FileLocation location;
+
+    public Action(final FileLocation location)
+    {
+        this.location = location;
+    }
+
+    public FileLocation getLocation()
+    {
+        return this.location;
+    }
+
+    public void error(final String message) throws AssemblerException
+    {
+        throw new AssemblerException(this.location, message);
+    }
+
+    public void error(final String message, final Throwable cause) throws AssemblerException
+    {
+        throw new AssemblerException(this.location, message, cause);
+    }
+
+    public abstract void run(Runtime runtime) throws AssemblerException;
 }

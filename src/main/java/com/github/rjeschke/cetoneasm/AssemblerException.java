@@ -16,19 +16,25 @@
 
 package com.github.rjeschke.cetoneasm;
 
-public enum AddressingMode
+public class AssemblerException extends Exception
 {
-    IMPLIED, // NOP, ASL
-    RELATIVE, // BNE $ab
-    IMMEDIATE, // LDA #$ab
-    ABSOLUTE, // LDA $abcd
-    ABSOLUTE_X, // LDA $abcd,X
-    ABSOLUTE_Y, // LDA $abcd,Y
-    ZEROPAGE, // LDA $ab
-    ZEROPAGE_X, // LDA $ab,X
-    ZEROPAGE_Y, // LDA $ab,Y
-    INDIRECT, // JMP ($abcd)
-    INDEXED_INDIRECT, // LDA ($ab),Y
-    INDIRECT_INDEXED, // LDA ($ab,X)
-    ILL
+    private static final long  serialVersionUID = -2167750849628223243L;
+    private final FileLocation location;
+
+    public AssemblerException(final FileLocation location, final String message)
+    {
+        super(message);
+        this.location = location;
+    }
+
+    public AssemblerException(final FileLocation location, final String message, final Throwable cause)
+    {
+        super(message, cause);
+        this.location = location;
+    }
+
+    public FileLocation getLocation()
+    {
+        return this.location;
+    }
 }

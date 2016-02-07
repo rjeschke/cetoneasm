@@ -16,19 +16,37 @@
 
 package com.github.rjeschke.cetoneasm;
 
-public enum AddressingMode
+public enum UnaryOperator
 {
-    IMPLIED, // NOP, ASL
-    RELATIVE, // BNE $ab
-    IMMEDIATE, // LDA #$ab
-    ABSOLUTE, // LDA $abcd
-    ABSOLUTE_X, // LDA $abcd,X
-    ABSOLUTE_Y, // LDA $abcd,Y
-    ZEROPAGE, // LDA $ab
-    ZEROPAGE_X, // LDA $ab,X
-    ZEROPAGE_Y, // LDA $ab,Y
-    INDIRECT, // JMP ($abcd)
-    INDEXED_INDIRECT, // LDA ($ab),Y
-    INDIRECT_INDEXED, // LDA ($ab,X)
-    ILL
+    NOT,
+    NEG,
+    MINUS,
+    LOW,
+    HIGH;
+
+    private final int priority = 20;
+
+    public int getPriority()
+    {
+        return this.priority;
+    }
+
+    public static UnaryOperator fromToken(final Token token)
+    {
+        switch (token.getType())
+        {
+        case NOT:
+            return NOT;
+        case LESS_THAN:
+            return LOW;
+        case NEG:
+            return NEG;
+        case MINUS:
+            return MINUS;
+        case GREATER_THAN:
+            return HIGH;
+        default:
+            return null;
+        }
+    }
 }
