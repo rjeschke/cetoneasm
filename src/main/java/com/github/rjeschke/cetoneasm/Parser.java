@@ -1,3 +1,19 @@
+/*
+ * Copyright (C) 2016 René Jeschke <rene_jeschke@yahoo.de>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.github.rjeschke.cetoneasm;
 
 import java.util.ArrayList;
@@ -185,17 +201,33 @@ public class Parser
         this.actions.add(new AssignAction(this.getFileLocation(), varName));
     }
 
-    private Integer evaluateStaticExpression(final List<Action> expr) throws AssemblerException
+    private Integer evaluateStaticExpression(final List<Action> expr)
     {
-        for (final Action a : expr)
+        try
         {
-            if (a instanceof GetVariableAction)
+            for (final Action a : expr)
             {
-                return null;
+                if (a instanceof GetVariableAction)
+                {
+                    return null;
+                }
             }
+            this.evalRuntime.testRun(expr);
+            return Integer.valueOf((int)this.evalRuntime.pop() & 65535);
         }
-        this.evalRuntime.testRun(expr);
-        return Integer.valueOf((int)this.evalRuntime.pop() & 65535);
+        catch (final Throwable t) // If test run fails, keep silent
+        {
+            return null;
+        }
+    }
+
+    private boolean simplifyStaticExpression(final List<Action> expr)
+    {
+        final Integer result = this.evaluateStaticExpression(expr);
+        if(result != null)
+        {
+
+        }
     }
 
     private void parseOpcode() throws AssemblerException

@@ -33,30 +33,62 @@ public class AssembleOpcodeAction extends Action
         ABSOLUTE_Y
     }
 
-    public AssembleOpcodeAction(final FileLocation location, final String opcode, final List<Action> expression)
+    private final String       mnemonic;
+    private final Opcode       opcode;
+    private final List<Action> expression;
+    private final WidthType    widthType;
+
+    private AssembleOpcodeAction(final FileLocation location, final String mnemonic, final Opcode opcode,
+            final WidthType widthtype, final List<Action> expression)
     {
         super(location);
-        // TODO Auto-generated constructor stub
+        this.mnemonic = mnemonic;
+        this.opcode = opcode;
+        this.widthType = widthtype;
+        this.expression = expression;
+    }
+
+    public AssembleOpcodeAction(final FileLocation location, final String opcode, final List<Action> expression)
+    {
+        this(location, opcode, null, null, expression);
     }
 
     public AssembleOpcodeAction(final FileLocation location, final String opcode, final WidthType widthtype,
             final List<Action> expression)
     {
-        super(location);
-        // TODO Auto-generated constructor stub
+        this(location, opcode, null, widthtype, expression);
     }
 
-    public AssembleOpcodeAction(final FileLocation location, final Opcode opc, final List<Action> expression)
+    public AssembleOpcodeAction(final FileLocation location, final Opcode opcode, final List<Action> expression)
     {
-        super(location);
-        // TODO Auto-generated constructor stub
+        this(location, null, opcode, null, expression);
     }
 
     @Override
     public void run(final Runtime runtime) throws AssemblerException
     {
         // TODO Auto-generated method stub
-
     }
 
+    @Override
+    public String toString()
+    {
+        final StringBuilder sb = new StringBuilder();
+        if (this.opcode != null)
+        {
+            sb.append(this.opcode);
+        }
+        else
+        {
+            sb.append(this.mnemonic);
+            if (this.widthType != null)
+            {
+                sb.append(',');
+                sb.append(this.widthType);
+            }
+        }
+        sb.append(';');
+        sb.append(this.expression);
+        return sb.toString();
+    }
 }
