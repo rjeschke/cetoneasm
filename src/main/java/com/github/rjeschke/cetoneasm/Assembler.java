@@ -224,7 +224,7 @@ public class Assembler
         return this.pop();
     }
 
-    public List<CodeContainer> compile(final Config config, final List<Action> iActions) throws AssemblerException
+    public List<CodeContainer> assemble(final Config config, final List<Action> iActions) throws AssemblerException
     {
         Action currentAction = null;
         try

@@ -90,7 +90,7 @@ public class Main
     {
         Con.initialize();
         Con.info("cetoneasm v1.0, (c) 2016 René 'Neotec/Cetone' Jeschke");
-        Con.info("--------------");
+        Con.info("-----------------------------------------------------");
         final Config config = new Config();
         final Assembler rt = new Assembler();
         final Tokenizer tok = new Tokenizer(config, "/home/rjeschke/Dropbox/testing.casm");
@@ -99,9 +99,8 @@ public class Main
             tok.open();
             Con.info("Parsing");
             final List<Action> actions = Parser.parse(tok);
-            System.out.println(actions);
             Con.info("Generating code");
-            final List<CodeContainer> containers = rt.compile(config, actions);
+            final List<CodeContainer> containers = rt.assemble(config, actions);
             if (containers.isEmpty())
             {
                 Con.warn(" No code generated");
@@ -127,6 +126,7 @@ public class Main
                 {
                     disasm.append(cc.toString());
                 }
+                Con.info(disasm.toString());
                 Con.info("Linking");
                 final byte[] prg = Linker.link(config, containers);
                 Con.info(" Code size: $%1$04x(%1$d) bytes", codeSize);
@@ -135,8 +135,6 @@ public class Main
                 Con.info(" PRG start: $%04x", containers.get(0).getStartAddress());
                 Con.info(" PRG end:   $%04x", containers.get(containers.size() - 1).getEndAddress() - 1);
                 Con.info(" PRG size:  $%1$04x(%1$d) bytes, %2$d blocks", prg.length, (prg.length + 253) / 254);
-                Con.info("Disassembly");
-                Con.info(disasm.toString());
             }
         }
         catch (final TokenizerException te)

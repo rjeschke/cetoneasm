@@ -38,7 +38,7 @@ public class Con
 
     public static void print(final Type type, final String fmt, final Object... args)
     {
-        final List<String> outs = Strings.split(String.format(fmt, args), '\n');
+        final List<String> outs = Strings.split(args.length > 0 ? String.format(fmt, args) : fmt, '\n');
         for (final String s : outs)
         {
             final long time = System.currentTimeMillis() - startTime;
