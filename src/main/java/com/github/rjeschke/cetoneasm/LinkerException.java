@@ -16,29 +16,17 @@
 
 package com.github.rjeschke.cetoneasm;
 
-public abstract class Action
+public class LinkerException extends Exception
 {
-    protected final FileLocation location;
+    private static final long serialVersionUID = -3945168443504516553L;
 
-    public Action(final FileLocation location)
+    public LinkerException(final String message)
     {
-        this.location = location;
+        super(message);
     }
 
-    public FileLocation getLocation()
+    public LinkerException(final String message, final Throwable cause)
     {
-        return this.location;
+        super(message, cause);
     }
-
-    public void error(final String message) throws AssemblerException
-    {
-        throw new AssemblerException(this.location, message);
-    }
-
-    public void error(final String message, final Throwable cause) throws AssemblerException
-    {
-        throw new AssemblerException(this.location, message, cause);
-    }
-
-    public abstract void run(Assembler assembler) throws AssemblerException;
 }

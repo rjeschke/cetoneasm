@@ -20,47 +20,31 @@ import com.github.rjeschke.cetoneasm.Action;
 import com.github.rjeschke.cetoneasm.AssemblerException;
 import com.github.rjeschke.cetoneasm.FileLocation;
 import com.github.rjeschke.cetoneasm.Assembler;
-import com.github.rjeschke.cetoneasm.UnaryOperator;
 
-public class UnaryOperatorAction extends Action
+public class SetVariableAction extends Action
 {
-    private final UnaryOperator operator;
+    private final String variableName;
 
-    public UnaryOperatorAction(final FileLocation location, final UnaryOperator operator)
+    public SetVariableAction(final FileLocation location, final String variableName)
     {
         super(location);
-        this.operator = operator;
+        this.variableName = variableName;
     }
 
     @Override
     public void run(final Assembler assembler) throws AssemblerException
     {
-        final long a = assembler.pop();
-        long c = 0;
-        switch (this.operator)
-        {
-        case HIGH:
-            c = (a >> 8) & 255;
-            break;
-        case LOW:
-            c = a & 255;
-            break;
-        case NOT:
-            c = a == 0 ? 1 : 0;
-            break;
-        case NEG:
-            c = ~a;
-            break;
-        case MINUS:
-            c = -a;
-            break;
-        }
-        assembler.push(c);
+        assembler.setVariableValue(this.variableName, assembler.pop());
+    }
+
+    public String getVariableName()
+    {
+        return this.variableName;
     }
 
     @Override
     public String toString()
     {
-        return "unary:" + this.operator;
+        return "assign:" + this.variableName;
     }
 }

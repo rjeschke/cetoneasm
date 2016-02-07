@@ -16,13 +16,16 @@
 
 package com.github.rjeschke.cetoneasm.actions;
 
+import java.util.HashMap;
 import java.util.List;
 
 import com.github.rjeschke.cetoneasm.Action;
+import com.github.rjeschke.cetoneasm.AddressingMode;
 import com.github.rjeschke.cetoneasm.AssemblerException;
 import com.github.rjeschke.cetoneasm.FileLocation;
+import com.github.rjeschke.cetoneasm.Opcodes;
 import com.github.rjeschke.cetoneasm.Opcodes.Opcode;
-import com.github.rjeschke.cetoneasm.Runtime;
+import com.github.rjeschke.cetoneasm.Assembler;
 
 public class AssembleOpcodeAction extends Action
 {
@@ -65,9 +68,71 @@ public class AssembleOpcodeAction extends Action
     }
 
     @Override
-    public void run(final Runtime runtime) throws AssemblerException
+    public void run(final Assembler assembler) throws AssemblerException
     {
-        // TODO Auto-generated method stub
+        final int address = this.expression != null ? ((int)assembler.evalExpression(this.expression) & 0xffff) : 0;
+        if (this.opcode != null)
+        {
+            assembler.emmitByte(this.opcode.value);
+
+            switch (this.opcode.adressingMode)
+            {
+            case IMPLIED:
+                break;
+            case ABSOLUTE:
+            case ABSOLUTE_X:
+            case ABSOLUTE_Y:
+            case INDIRECT:
+                assembler.emmitWord(address);
+                break;
+            case IMMEDIATE:
+            case ZEROPAGE:
+            case ZEROPAGE_X:
+            case ZEROPAGE_Y:
+            case INDEXED_INDIRECT:
+            case INDIRECT_INDEXED:
+                assembler.emmitByte(address);
+                break;
+            case RELATIVE:
+            {
+                final int disp = assembler.getPassNumber() > 3 ? address - (assembler.getPC() + 1) : 0;
+                if (disp < -128 || disp > 127)
+                {
+                    this.error("Branch out of reach: " + disp);
+                }
+                assembler.emmitByte(disp);
+                break;
+            }
+            case ILL:
+                this.error("Internal error, encountered illegal addressing mode");
+            }
+        }
+        else
+        {
+            final boolean small = address < 256;
+            final HashMap<AddressingMode, Opcode> map = Opcodes.BY_NAME_MAPPED.get(this.mnemonic);
+
+            switch (this.widthType)
+            {
+            case ABSOLUTE:
+                assembler.emmitByte(map.get(small ? AddressingMode.ZEROPAGE : AddressingMode.ABSOLUTE).value);
+                break;
+            case ABSOLUTE_X:
+                assembler.emmitByte(map.get(small ? AddressingMode.ZEROPAGE_X : AddressingMode.ABSOLUTE_X).value);
+                break;
+            case ABSOLUTE_Y:
+                assembler.emmitByte(map.get(small ? AddressingMode.ZEROPAGE_Y : AddressingMode.ABSOLUTE_Y).value);
+                break;
+            }
+            if (small)
+            {
+                assembler.emmitByte(address);
+            }
+            else
+            {
+                assembler.emmitWord(address);
+            }
+        }
     }
 
     @Override

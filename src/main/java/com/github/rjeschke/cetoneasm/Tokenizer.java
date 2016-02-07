@@ -277,8 +277,11 @@ public class Tokenizer
                     return Token.tGeneric(this, Type.EOF);
                 case '\n':
                     this.lineNo++;
+                    //$FALL-THROUGH$
                 case ' ':
+                    //$FALL-THROUGH$
                 case '\t':
+                    //$FALL-THROUGH$
                 case '\r':
                     this.consume();
                     continue;
@@ -398,7 +401,7 @@ public class Tokenizer
                     {
                         return this.readNumber();
                     }
-                    throw new TokenizerException(this, "Illegal character: '" + ((char)this.peek()) + "'");
+                    throw new TokenizerException(this, "Illegal character '" + ((char)this.peek()) + "'");
                 }
             }
         }

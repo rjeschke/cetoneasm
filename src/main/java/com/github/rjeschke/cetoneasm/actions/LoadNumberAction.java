@@ -19,7 +19,7 @@ package com.github.rjeschke.cetoneasm.actions;
 import com.github.rjeschke.cetoneasm.Action;
 import com.github.rjeschke.cetoneasm.AssemblerException;
 import com.github.rjeschke.cetoneasm.FileLocation;
-import com.github.rjeschke.cetoneasm.Runtime;
+import com.github.rjeschke.cetoneasm.Assembler;
 
 public class LoadNumberAction extends Action
 {
@@ -32,9 +32,9 @@ public class LoadNumberAction extends Action
     }
 
     @Override
-    public void run(final Runtime runtime) throws AssemblerException
+    public void run(final Assembler assembler) throws AssemblerException
     {
-        runtime.push(this.value);
+        assembler.push(this.value);
     }
 
     public long getValue()

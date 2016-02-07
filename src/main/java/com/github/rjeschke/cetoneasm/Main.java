@@ -16,30 +16,62 @@
 
 package com.github.rjeschke.cetoneasm;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
 import java.util.List;
 
 public class Main
 {
+    private static String getStackTrace(final Throwable t)
+    {
+        final ByteArrayOutputStream out = new ByteArrayOutputStream();
+        final PrintWriter w = new PrintWriter(out, true);
+        t.printStackTrace(w);
+        try
+        {
+            return new String(out.toByteArray(), "UTF-8");
+        }
+        catch (final UnsupportedEncodingException e)
+        {
+            return "";
+        }
+    }
+
     private static void reportTokenizerError(final TokenizerException te)
     {
         if (te.getCause() == null)
         {
-            System.err.println("Tokenizer error at " + te.getLocation() + " -> " + te.getMessage());
+            Con.error(te.getLocation() + ": " + te.getMessage());
         }
         else
         {
-            System.err.println("Exception in " + te.getLocation() + " -> " + te.getMessage()
+            Con.error("Exception in " + te.getLocation() + " -> " + te.getMessage()
                     + " (" + te.getCause().getMessage() + ")");
-            te.printStackTrace();
+            Con.error(getStackTrace(te));
         }
         System.exit(1);
+    }
+
+    private static void reportLinkerError(final LinkerException le)
+    {
+        if (le.getCause() == null)
+        {
+            Con.error(le.getMessage());
+        }
+        else
+        {
+            Con.error("Exception -> " + le.getMessage() + " (" + le.getCause().getMessage() + ")");
+            Con.error(getStackTrace(le));
+        }
+        System.exit(3);
     }
 
     private static void reportAssemblerError(final AssemblerException ae)
     {
         if (ae.getCause() == null)
         {
-            System.err.println("Error at " + ae.getLocation() + " -> " + ae.getMessage());
+            Con.error(ae.getLocation() + ": " + ae.getMessage());
         }
         else
         {
@@ -47,26 +79,35 @@ public class Main
             {
                 reportTokenizerError((TokenizerException)ae.getCause());
             }
-            System.err.println("Exception in " + ae.getLocation() + " -> " + ae.getMessage()
+            Con.error("Exception in " + ae.getLocation() + " -> " + ae.getMessage()
                     + " (" + ae.getCause().getMessage() + ")");
-            ae.printStackTrace();
+            Con.error(getStackTrace(ae));
         }
         System.exit(2);
     }
 
     public static void main(final String[] args) throws TokenizerException
     {
+        Con.initialize();
+        Con.info("cetoneasm v1.0, (c) 2016 René 'Neotec/Cetone' Jeschke");
+        Con.info("--------------");
         final Config config = new Config();
+        final Assembler rt = new Assembler();
         final Tokenizer tok = new Tokenizer(config, "/home/rjeschke/Dropbox/testing.casm");
         try
         {
             tok.open();
+            Con.info("Parsing");
             final List<Action> actions = Parser.parse(tok);
-            System.out.println(actions);
-            final Runtime rt = new Runtime();
-            rt.testRun(actions);
-            System.out.println(rt.getVariable("@"));
-            System.out.println(rt.getVariable("VAR"));
+            Con.info("Generating code");
+            final List<CodeContainer> containers = rt.compile(config, actions);
+            Con.info("Linking");
+            final byte[] prg = Linker.link(config, containers);
+            Con.info(" PRG start: $%04x", containers.get(0).getStartAddress());
+            Con.info(" PRG end:   $%04x", containers.get(containers.size() - 1).getEndAddress() - 1);
+            Con.info(" PRG size:  $%04x(%d) bytes, %d blocks", prg.length, prg.length, (prg.length + 253) / 254);
+            // Con.info(actions.toString());
+            // Con.info(containers.toString());
         }
         catch (final TokenizerException te)
         {
@@ -76,6 +117,11 @@ public class Main
         {
             reportAssemblerError(ae);
         }
+        catch (final LinkerException le)
+        {
+            reportLinkerError(le);
+        }
+        Con.info("READY.");
         System.exit(0);
     }
 }

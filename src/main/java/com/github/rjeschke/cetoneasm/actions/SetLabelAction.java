@@ -19,27 +19,32 @@ package com.github.rjeschke.cetoneasm.actions;
 import com.github.rjeschke.cetoneasm.Action;
 import com.github.rjeschke.cetoneasm.AssemblerException;
 import com.github.rjeschke.cetoneasm.FileLocation;
-import com.github.rjeschke.cetoneasm.Runtime;
+import com.github.rjeschke.cetoneasm.Assembler;
 
-public class AssignAction extends Action
+public class SetLabelAction extends Action
 {
-    private final String variableName;
+    private final String labelName;
 
-    public AssignAction(final FileLocation location, final String variableName)
+    public SetLabelAction(final FileLocation location, final String labelName)
     {
         super(location);
-        this.variableName = variableName;
+        this.labelName = labelName;
     }
 
     @Override
-    public void run(final Runtime runtime) throws AssemblerException
+    public void run(final Assembler assembler) throws AssemblerException
     {
-        runtime.getOrCreateVar(this.variableName).set(runtime.pop());
+        assembler.setLabelAddress(this.labelName, assembler.getPC());
+    }
+
+    public String getLabelName()
+    {
+        return this.labelName;
     }
 
     @Override
     public String toString()
     {
-        return "assign:" + this.variableName;
+        return "label:" + this.labelName;
     }
 }

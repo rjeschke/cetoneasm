@@ -18,8 +18,9 @@ package com.github.rjeschke.cetoneasm;
 
 public class Variable
 {
-    public long    value       = 0;
-    public boolean initialized = false;
+    private long    value       = 0;
+    private boolean initialized = false;
+    private boolean wasRead     = false;
 
     public Variable()
     {
@@ -42,5 +43,28 @@ public class Variable
     {
         this.value = value;
         this.initialized = true;
+    }
+
+    public long get()
+    {
+        this.wasRead = true;
+        return this.value;
+    }
+
+    public boolean isInitialized()
+    {
+        return this.initialized;
+    }
+
+    public boolean wasRead()
+    {
+        return this.wasRead;
+    }
+
+    public void reset()
+    {
+        this.value = 0;
+        this.initialized = false;
+        this.wasRead = false;
     }
 }

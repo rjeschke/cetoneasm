@@ -24,18 +24,18 @@ import com.github.rjeschke.cetoneasm.Opcodes.Opcode;
 import com.github.rjeschke.cetoneasm.Token.Type;
 import com.github.rjeschke.cetoneasm.actions.AssembleOpcodeAction;
 import com.github.rjeschke.cetoneasm.actions.AssembleOpcodeAction.WidthType;
-import com.github.rjeschke.cetoneasm.actions.AssignAction;
 import com.github.rjeschke.cetoneasm.actions.BinaryOperatorAction;
 import com.github.rjeschke.cetoneasm.actions.GetVariableAction;
 import com.github.rjeschke.cetoneasm.actions.LoadNumberAction;
+import com.github.rjeschke.cetoneasm.actions.SetLabelAction;
+import com.github.rjeschke.cetoneasm.actions.SetVariableAction;
 import com.github.rjeschke.cetoneasm.actions.UnaryOperatorAction;
 
 public class Parser
 {
-    private final List<Token>  tokens;
-    private final List<Action> actions     = new ArrayList<Action>();
-    private int                position    = 0;
-    private final Runtime      evalRuntime = new Runtime();
+    private final List<Token> tokens;
+    private int               position    = 0;
+    private final Assembler     evalRuntime = new Assembler();
 
     private Parser(final List<Token> tokens)
     {
@@ -59,7 +59,7 @@ public class Parser
 
     public static List<Action> parse(final List<Token> tokens) throws AssemblerException
     {
-        return new Parser(tokens).parse();
+        return new Parser(tokens).parse(new ArrayList<Action>());
     }
 
     private Token peek(final int offset)
@@ -127,7 +127,10 @@ public class Parser
 
     private List<Action> parseExpression() throws AssemblerException
     {
-        return this.parseExpression(-1, new ArrayList<Action>());
+        final List<Action> expr = new ArrayList<Action>();
+        this.parseExpression(-1, expr);
+        this.simplifyStaticExpression(expr);
+        return expr;
     }
 
     private List<Action> parseExpression(final int prio, final List<Action> lActions) throws AssemblerException
@@ -153,7 +156,7 @@ public class Parser
                 this.consume();
                 break;
             case WORD:
-                lActions.add(new GetVariableAction(this.getFileLocation(), "@"));
+                lActions.add(new GetVariableAction(this.getFileLocation(), this.getStringValue()));
                 this.consume();
                 break;
             case NUMBER:
@@ -189,19 +192,19 @@ public class Parser
         return lActions;
     }
 
-    private void parseAssigment() throws AssemblerException
+    private void parseAssigment(final List<Action> actions) throws AssemblerException
     {
         if (this.peek(1).getType() != Token.Type.ASSIGN)
         {
-            throw new AssemblerException(this.getFileLocation(), "Syntax erro, '=' expected");
+            throw new AssemblerException(this.getFileLocation(), "'=' expected");
         }
         final String varName = this.peek().getType() == Token.Type.PC ? "@" : this.getStringValue();
         this.consume(2);
-        this.actions.addAll(this.parseExpression());
-        this.actions.add(new AssignAction(this.getFileLocation(), varName));
+        actions.addAll(this.parseExpression());
+        actions.add(new SetVariableAction(this.getFileLocation(), varName));
     }
 
-    private Integer evaluateStaticExpression(final List<Action> expr)
+    private Long evaluateStaticExpression(final List<Action> expr)
     {
         try
         {
@@ -212,8 +215,7 @@ public class Parser
                     return null;
                 }
             }
-            this.evalRuntime.testRun(expr);
-            return Integer.valueOf((int)this.evalRuntime.pop() & 65535);
+            return Long.valueOf(this.evalRuntime.evalExpression(expr));
         }
         catch (final Throwable t) // If test run fails, keep silent
         {
@@ -223,21 +225,26 @@ public class Parser
 
     private boolean simplifyStaticExpression(final List<Action> expr)
     {
-        final Integer result = this.evaluateStaticExpression(expr);
-        if(result != null)
+        final Long result = this.evaluateStaticExpression(expr);
+        if (result != null)
         {
-
+            final Action first = expr.get(0);
+            expr.clear();
+            expr.add(new LoadNumberAction(first.getLocation(), result.longValue()));
+            return true;
         }
+        return false;
     }
 
-    private void parseOpcode() throws AssemblerException
+    // XXX: This needs cleaning
+    private void parseOpcode(final List<Action> actions) throws AssemblerException
     {
         final FileLocation opfl = this.getFileLocation();
         final String opcs = this.getStringValue();
         final HashMap<AddressingMode, Opcode> opcm = Opcodes.BY_NAME_MAPPED.get(opcs);
         this.consume();
 
-        final int actionsBefore = this.actions.size();
+        final int actionsBefore = actions.size();
 
         // Is next token unrelated?
         AddressingMode addrMode = null;
@@ -245,6 +252,10 @@ public class Parser
         {
             addrMode = AddressingMode.IMMEDIATE;
             this.consume();
+        }
+        else if (opcm.size() == 1 && opcm.containsKey(AddressingMode.RELATIVE))
+        {
+            addrMode = AddressingMode.RELATIVE;
         }
         else
         {
@@ -259,6 +270,7 @@ public class Parser
             case STRING:
             case SCR_STRING:
                 nextUnrelated = true;
+                break;
             case WORD:
             case SUB_WORD:
                 nextUnrelated = this.peek(1).getType() == Token.Type.ASSIGN;
@@ -272,14 +284,25 @@ public class Parser
             }
         }
 
-        if (addrMode != null) // Immediate, implied
+        if (addrMode != null) // Implied, Immediate
         {
             final Opcode opc = opcm.get(addrMode);
             if (opc == null)
             {
                 throw new AssemblerException(opfl, "Illegal addressing mode");
             }
-            this.actions.add(new AssembleOpcodeAction(opfl, opc, this.parseExpression()));
+            switch (addrMode)
+            {
+            case IMMEDIATE:
+            case RELATIVE:
+                actions.add(new AssembleOpcodeAction(opfl, opc, this.parseExpression()));
+                break;
+            case IMPLIED:
+                actions.add(new AssembleOpcodeAction(opfl, opc, null));
+                break;
+            default:
+                throw new AssemblerException(opfl, "Internal error, uncatched addressing mode: " + addrMode);
+            }
         }
         else
         {
@@ -331,13 +354,13 @@ public class Parser
                 {
                     throw new AssemblerException(opfl, "Illegal addressing mode");
                 }
-                this.actions.add(new AssembleOpcodeAction(opfl, opc, expression));
+                actions.add(new AssembleOpcodeAction(opfl, opc, expression));
             }
             else
             {
                 expression = this.parseExpression();
-                final Integer exprValue = this.evaluateStaticExpression(expression);
-                final int width = exprValue == null ? 0 : (exprValue.intValue() < 256 ? 1 : 2);
+                final Long exprValue = this.evaluateStaticExpression(expression);
+                final int width = exprValue == null ? 0 : ((exprValue.longValue() & 0xffff) < 256 ? 1 : 2);
                 final int index;
                 if (this.peek().getType() == Token.Type.COMMA)
                 {
@@ -389,13 +412,13 @@ public class Parser
                         switch (index)
                         {
                         case 0:
-                            this.actions.add(new AssembleOpcodeAction(opfl, opcs, WidthType.ABSOLUTE, expression));
+                            actions.add(new AssembleOpcodeAction(opfl, opcs, WidthType.ABSOLUTE, expression));
                             break;
                         case 1:
-                            this.actions.add(new AssembleOpcodeAction(opfl, opcs, WidthType.ABSOLUTE_X, expression));
+                            actions.add(new AssembleOpcodeAction(opfl, opcs, WidthType.ABSOLUTE_X, expression));
                             break;
                         case 2:
-                            this.actions.add(new AssembleOpcodeAction(opfl, opcs, WidthType.ABSOLUTE_Y, expression));
+                            actions.add(new AssembleOpcodeAction(opfl, opcs, WidthType.ABSOLUTE_Y, expression));
                             break;
                         }
                     }
@@ -413,8 +436,9 @@ public class Parser
                             addrMode = (mask & 1) != 0 ? AddressingMode.ZEROPAGE_Y : AddressingMode.ABSOLUTE_Y;
                             break;
                         }
-                        this.actions.add(new AssembleOpcodeAction(opfl, opcm.get(addrMode), expression));
+                        actions.add(new AssembleOpcodeAction(opfl, opcm.get(addrMode), expression));
                     }
+                    break;
                 case 1:
                     switch (index)
                     {
@@ -428,7 +452,7 @@ public class Parser
                         addrMode = (mask & 1) != 0 ? AddressingMode.ZEROPAGE_Y : AddressingMode.ABSOLUTE_Y;
                         break;
                     }
-                    this.actions.add(new AssembleOpcodeAction(opfl, opcm.get(addrMode), expression));
+                    actions.add(new AssembleOpcodeAction(opfl, opcm.get(addrMode), expression));
                     break;
                 case 2:
                     switch (index)
@@ -447,42 +471,62 @@ public class Parser
                     {
                         throw new AssemblerException(opfl, "Illegal addressing mode");
                     }
-                    this.actions.add(new AssembleOpcodeAction(opfl, opcm.get(addrMode), expression));
+                    actions.add(new AssembleOpcodeAction(opfl, opcm.get(addrMode), expression));
                     break;
                 }
             }
         }
         // TODO ... *sigh*
-        if (actionsBefore == this.actions.size())
+        if (actionsBefore == actions.size())
         {
             throw new AssemblerException(opfl, "Internal error, no opcode action written");
         }
     }
 
-    private List<Action> parse() throws AssemblerException
+    private List<Action> parse(final List<Action> actions, final Token.Type... endMarker) throws AssemblerException
     {
-        while (this.position < this.tokens.size())
+        boolean finished = false;
+        while (this.position < this.tokens.size() && !finished)
         {
-            System.out.println(this.peek());
             switch (this.peek().getType())
             {
             case META:
                 this.parseMeta();
                 break;
-            case WORD:
-            case PC:
-                this.parseAssigment();
-                break;
-            case OPCODE:
-                this.parseOpcode();
-                break;
-            case EOF:
+            case LABEL:
+            case SUB_LABEL:
+                actions.add(new SetLabelAction(this.getFileLocation(), this.getStringValue()));
                 this.consume();
                 break;
+            case WORD:
+            case PC:
+                this.parseAssigment(actions);
+                break;
+            case OPCODE:
+                this.parseOpcode(actions);
+                break;
+            case EOF:
+                finished = true;
+                break;
             default:
-                throw new AssemblerException(this.peek().getLocation(), "Syntax error");
+                if (endMarker.length != 0)
+                {
+                    for (final Token.Type t : endMarker)
+                    {
+                        if (this.peek().getType() == t)
+                        {
+                            finished = true;
+                            break;
+                        }
+                    }
+                }
+                if (!finished)
+                {
+                    throw new AssemblerException(this.peek().getLocation(), "Syntax error");
+                }
+                break;
             }
         }
-        return this.actions;
+        return actions;
     }
 }

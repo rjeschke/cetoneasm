@@ -20,7 +20,7 @@ import com.github.rjeschke.cetoneasm.Action;
 import com.github.rjeschke.cetoneasm.AssemblerException;
 import com.github.rjeschke.cetoneasm.BinaryOperator;
 import com.github.rjeschke.cetoneasm.FileLocation;
-import com.github.rjeschke.cetoneasm.Runtime;
+import com.github.rjeschke.cetoneasm.Assembler;
 
 public class BinaryOperatorAction extends Action
 {
@@ -33,10 +33,10 @@ public class BinaryOperatorAction extends Action
     }
 
     @Override
-    public void run(final Runtime runtime) throws AssemblerException
+    public void run(final Assembler assembler) throws AssemblerException
     {
-        final long b = runtime.pop();
-        final long a = runtime.pop();
+        final long b = assembler.pop();
+        final long a = assembler.pop();
         long c = 0;
         switch (this.operator)
         {
@@ -86,7 +86,7 @@ public class BinaryOperatorAction extends Action
             c = a >= b ? 1 : 0;
             break;
         }
-        runtime.push(c);
+        assembler.push(c);
     }
 
     @Override
