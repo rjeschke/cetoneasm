@@ -19,8 +19,10 @@ package com.github.rjeschke.cetoneasm;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 
+import com.github.rjeschke.cetoneasm.actions.JumpLabelAction;
 import com.github.rjeschke.cetoneasm.actions.SetLabelAction;
 import com.github.rjeschke.cetoneasm.actions.SetVariableAction;
 import com.github.rjeschke.neetutils.collections.Colls;
@@ -29,11 +31,13 @@ public class Assembler
 {
     private final HashMap<String, Variable> variables          = new HashMap<String, Variable>();
     private final HashMap<String, Variable> labels             = new HashMap<String, Variable>();
+    private final HashMap<Long, Integer>    jumpLabelToIndex   = new HashMap<Long, Integer>();
     private final long[]                    arithStack         = new long[1024];
     private int                             arithSp;
     private Variable                        pcVariable         = null;
     private final ArrayList<CodeContainer>  codeContainers     = new ArrayList<CodeContainer>();
     private int                             passNumber         = 0;
+    private long                            jumpId             = -1;
     private boolean                         throwIfUnitialized = false;
 
     private static String[]                 PASS_NAMES         = Colls.objArray(
@@ -54,12 +58,16 @@ public class Assembler
         this.variables.clear();
         this.variables.put("@", this.pcVariable = new Variable());
         this.arithSp = 0;
+        this.jumpId = -1;
     }
 
     private void startPass(final int index)
     {
-        this.passNumber = index;
         Con.info(" Pass #%d = %s", index + 1, PASS_NAMES[index]);
+
+        this.passNumber = index;
+        this.jumpId = -1;
+
         switch (index)
         {
         case 0: // .INCLUDE
@@ -67,6 +75,7 @@ public class Assembler
         case 1: // .CALL
             break;
         case 2: // Gather variables/labels
+            this.jumpLabelToIndex.clear();
             break;
         case 3: // Initial compile
             this.codeContainers.clear();
@@ -94,11 +103,18 @@ public class Assembler
         return this.passNumber;
     }
 
+    public void setJumpId(final long id)
+    {
+        this.jumpId = id;
+    }
+
     public void emmitByte(final int value) throws AssemblerException
     {
-        if (this.codeContainers.isEmpty() || !this.getCurrentCodeContainer().isConsecutive(this.getPC()))
+        if (this.codeContainers.isEmpty()
+                || !this.getCurrentCodeContainer().isConsecutive(this.getPC())
+                || this.getCurrentCodeContainer().isDataContainer())
         {
-            this.codeContainers.add(new CodeContainer(this.getPC()));
+            this.codeContainers.add(new CodeContainer(this.getPC(), false));
         }
         this.getCurrentCodeContainer().add(value);
         this.incPC();
@@ -108,6 +124,24 @@ public class Assembler
     {
         this.emmitByte(value & 255);
         this.emmitByte((value >> 8) & 255);
+    }
+
+    public void emmitDataByte(final int value) throws AssemblerException
+    {
+        if (this.codeContainers.isEmpty()
+                || !this.getCurrentCodeContainer().isConsecutive(this.getPC())
+                || !this.getCurrentCodeContainer().isDataContainer())
+        {
+            this.codeContainers.add(new CodeContainer(this.getPC(), true));
+        }
+        this.getCurrentCodeContainer().add(value);
+        this.incPC();
+    }
+
+    public void emmitDataWord(final int value) throws AssemblerException
+    {
+        this.emmitDataByte(value & 255);
+        this.emmitDataByte((value >> 8) & 255);
     }
 
     private void incPC() throws AssemblerException
@@ -205,6 +239,17 @@ public class Assembler
 
             // Pass 3: Gather variables/labels
             this.startPass(2);
+
+            for (int i = 0; i < actions.size(); i++)
+            {
+                final Action action = actions.get(i);
+                if (action instanceof JumpLabelAction)
+                {
+                    this.jumpLabelToIndex.put(((JumpLabelAction)action).getID(), i);
+                    actions.remove(i--);
+                }
+            }
+
             for (final Action action : actions)
             {
                 currentAction = action;
@@ -226,9 +271,11 @@ public class Assembler
                 }
             }
 
+            final ActionIterable iterable = new ActionIterable(actions, this);
+
             // Pass 4: Compile
             this.startPass(3);
-            for (final Action action : actions)
+            for (final Action action : iterable)
             {
                 currentAction = action;
                 action.run(this);
@@ -236,7 +283,7 @@ public class Assembler
 
             // Pass 5: Compile, throw if unitialized
             this.startPass(4);
-            for (final Action action : actions)
+            for (final Action action : iterable)
             {
                 currentAction = action;
                 action.run(this);
@@ -244,7 +291,7 @@ public class Assembler
 
             // Pass 6: Compile, throw if unitialized, look-ahead settling
             this.startPass(5);
-            for (final Action action : actions)
+            for (final Action action : iterable)
             {
                 currentAction = action;
                 action.run(this);
@@ -261,6 +308,69 @@ public class Assembler
                 throw new AssemblerException(currentAction.getLocation(), ae.getMessage(), ae.getCause());
             }
             throw ae;
+        }
+    }
+
+    private static class ActionIterable implements Iterable<Action>
+    {
+        private final List<Action> actions;
+        private final Assembler    assembler;
+
+        public ActionIterable(final List<Action> actions, final Assembler assembler)
+        {
+            this.actions = actions;
+            this.assembler = assembler;
+        }
+
+        @Override
+        public Iterator<Action> iterator()
+        {
+            return new ActionIterator(this.actions, this.assembler);
+        }
+
+        private static class ActionIterator implements Iterator<Action>
+        {
+            private final List<Action> actions;
+            private final Assembler    assembler;
+            private int                index = 0;
+
+            public ActionIterator(final List<Action> actions, final Assembler assembler)
+            {
+                this.actions = actions;
+                this.assembler = assembler;
+            }
+
+            @Override
+            public boolean hasNext()
+            {
+                final int temp;
+                if (this.assembler.jumpId >= 0)
+                {
+                    temp = this.assembler.jumpLabelToIndex.get(this.assembler.jumpId);
+                }
+                else
+                {
+                    temp = this.index;
+                }
+                return temp < this.actions.size();
+            }
+
+            @Override
+            public Action next()
+            {
+                if (this.assembler.jumpId >= 0)
+                {
+                    this.index = this.assembler.jumpLabelToIndex.get(this.assembler.jumpId);
+                    this.assembler.jumpId = -1;
+                }
+                return this.actions.get(this.index++);
+            }
+
+            @Override
+            public void remove()
+            {
+                //
+            }
         }
     }
 }

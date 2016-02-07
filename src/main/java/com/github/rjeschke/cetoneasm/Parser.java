@@ -25,17 +25,22 @@ import com.github.rjeschke.cetoneasm.Token.Type;
 import com.github.rjeschke.cetoneasm.actions.AssembleOpcodeAction;
 import com.github.rjeschke.cetoneasm.actions.AssembleOpcodeAction.WidthType;
 import com.github.rjeschke.cetoneasm.actions.BinaryOperatorAction;
+import com.github.rjeschke.cetoneasm.actions.ConditionalJumpAction;
+import com.github.rjeschke.cetoneasm.actions.DataStorageAction;
 import com.github.rjeschke.cetoneasm.actions.GetVariableAction;
+import com.github.rjeschke.cetoneasm.actions.JumpAction;
+import com.github.rjeschke.cetoneasm.actions.JumpLabelAction;
 import com.github.rjeschke.cetoneasm.actions.LoadNumberAction;
 import com.github.rjeschke.cetoneasm.actions.SetLabelAction;
 import com.github.rjeschke.cetoneasm.actions.SetVariableAction;
+import com.github.rjeschke.cetoneasm.actions.StringStoreAction;
 import com.github.rjeschke.cetoneasm.actions.UnaryOperatorAction;
 
 public class Parser
 {
     private final List<Token> tokens;
     private int               position    = 0;
-    private final Assembler     evalRuntime = new Assembler();
+    private final Assembler   evalRuntime = new Assembler();
 
     private Parser(final List<Token> tokens)
     {
@@ -94,7 +99,78 @@ public class Parser
         return this.peek().getStringValue();
     }
 
-    private void parseMeta() throws AssemblerException
+    private void parseDataStore(final List<Action> actions, final MetaCommand mc) throws AssemblerException
+    {
+        final FileLocation ds = this.getFileLocation();
+        final List<List<Action>> expressions = new ArrayList<List<Action>>();
+        for (;;)
+        {
+            if (this.peek().getType() == Token.Type.STRING || this.peek().getType() == Token.Type.SCR_STRING)
+            {
+                final ArrayList<Action> expr = new ArrayList<Action>();
+                expr.add(new StringStoreAction(this.getFileLocation(), this.getStringValue(),
+                        this.peek().getType() == Token.Type.SCR_STRING));
+                expressions.add(expr);
+                this.consume();
+            }
+            else
+            {
+                expressions.add(this.parseExpression());
+            }
+            if (this.peek().getType() == Token.Type.COMMA)
+            {
+                this.consume();
+                continue;
+            }
+            break;
+        }
+        actions.add(new DataStorageAction(ds, mc == MetaCommand.DW, expressions));
+    }
+
+    private void parseConditionalBlock(final List<Action> actions) throws AssemblerException
+    {
+        final JumpLabelAction endLabel = new JumpLabelAction(this.getFileLocation());
+        boolean hasElse = false;
+        for (;;)
+        {
+            if (this.peek().getType() != Token.Type.META)
+            {
+                throw new AssemblerException(this.getFileLocation(), "Syntax error");
+            }
+            final MetaCommand mc = MetaCommand.byName(this.peek().getStringValue());
+            this.consume();
+            if (mc == MetaCommand.ENDIF)
+            {
+                break;
+            }
+            else if (mc == MetaCommand.ELSE)
+            {
+                if (hasElse)
+                {
+                    throw new AssemblerException(this.getFileLocation(), "Duplicate ELSE in IF clause");
+                }
+                hasElse = true;
+                this.parse(actions, "ELIF", "ELSE", "ENDIF");
+                actions.add(new JumpAction(this.getFileLocation(), endLabel.getID()));
+            }
+            else
+            {
+                if (hasElse)
+                {
+                    throw new AssemblerException(this.getFileLocation(), mc + " after ELSE");
+                }
+                final JumpLabelAction endBlock = new JumpLabelAction(this.getFileLocation());
+                final List<Action> expr = this.parseExpression();
+                actions.add(new ConditionalJumpAction(this.getFileLocation(), endBlock.getID(), expr));
+                this.parse(actions, "ELIF", "ELSE", "ENDIF");
+                actions.add(new JumpAction(this.getFileLocation(), endLabel.getID()));
+                actions.add(endBlock);
+            }
+        }
+        actions.add(endLabel);
+    }
+
+    private void parseMeta(final List<Action> actions) throws AssemblerException
     {
         final MetaCommand mc = MetaCommand.byName(this.peek().getStringValue());
         if (mc == null)
@@ -102,7 +178,27 @@ public class Parser
             throw new AssemblerException(this.getFileLocation(), "Illegal meta command '"
                     + this.getStringValue() + "'");
         }
-        this.consume();
+        switch (mc)
+        {
+        case IF:
+            this.parseConditionalBlock(actions);
+            break;
+        case ELIF:
+            throw new AssemblerException(this.getFileLocation(), "ELIF without IF");
+        case ELSE:
+            throw new AssemblerException(this.getFileLocation(), "ELSE without IF");
+        case ENDIF:
+            throw new AssemblerException(this.getFileLocation(), "ENDIF without IF");
+        case ENDMACRO:
+            throw new AssemblerException(this.getFileLocation(), "ENDMACRO without MACRO");
+        case DB:
+        case DW:
+            this.consume();
+            this.parseDataStore(actions, mc);
+            break;
+        default:
+            throw new AssemblerException(this.getFileLocation(), "Unimplemented meta command '" + mc + "'");
+        }
     }
 
     private boolean isExpression()
@@ -483,7 +579,7 @@ public class Parser
         }
     }
 
-    private List<Action> parse(final List<Action> actions, final Token.Type... endMarker) throws AssemblerException
+    private List<Action> parse(final List<Action> actions, final String... endMetaMarker) throws AssemblerException
     {
         boolean finished = false;
         while (this.position < this.tokens.size() && !finished)
@@ -491,7 +587,21 @@ public class Parser
             switch (this.peek().getType())
             {
             case META:
-                this.parseMeta();
+                if (endMetaMarker.length != 0)
+                {
+                    for (final String m : endMetaMarker)
+                    {
+                        if (this.getStringValue().equals(m))
+                        {
+                            finished = true;
+                            break;
+                        }
+                    }
+                }
+                if (!finished)
+                {
+                    this.parseMeta(actions);
+                }
                 break;
             case LABEL:
             case SUB_LABEL:
@@ -509,17 +619,6 @@ public class Parser
                 finished = true;
                 break;
             default:
-                if (endMarker.length != 0)
-                {
-                    for (final Token.Type t : endMarker)
-                    {
-                        if (this.peek().getType() == t)
-                        {
-                            finished = true;
-                            break;
-                        }
-                    }
-                }
                 if (!finished)
                 {
                     throw new AssemblerException(this.peek().getLocation(), "Syntax error");

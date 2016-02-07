@@ -99,15 +99,45 @@ public class Main
             tok.open();
             Con.info("Parsing");
             final List<Action> actions = Parser.parse(tok);
+            System.out.println(actions);
             Con.info("Generating code");
             final List<CodeContainer> containers = rt.compile(config, actions);
-            Con.info("Linking");
-            final byte[] prg = Linker.link(config, containers);
-            Con.info(" PRG start: $%04x", containers.get(0).getStartAddress());
-            Con.info(" PRG end:   $%04x", containers.get(containers.size() - 1).getEndAddress() - 1);
-            Con.info(" PRG size:  $%04x(%d) bytes, %d blocks", prg.length, prg.length, (prg.length + 253) / 254);
-            // Con.info(actions.toString());
-            // Con.info(containers.toString());
+            if (containers.isEmpty())
+            {
+                Con.warn(" No code generated");
+            }
+            else
+            {
+                int codeSize = 0;
+                int dataSize = 0;
+                for (final CodeContainer cc : containers)
+                {
+                    if (cc.isDataContainer())
+                    {
+                        dataSize += cc.getSize();
+                    }
+                    else
+                    {
+                        codeSize += cc.getSize();
+                    }
+                }
+                Con.info("Generating disassembly");
+                final StringBuilder disasm = new StringBuilder();
+                for (final CodeContainer cc : containers)
+                {
+                    disasm.append(cc.toString());
+                }
+                Con.info("Linking");
+                final byte[] prg = Linker.link(config, containers);
+                Con.info(" Code size: $%1$04x(%1$d) bytes", codeSize);
+                Con.info(" Data size: $%1$04x(%1$d) bytes", dataSize);
+                Con.info(" Padding:   $%1$04x(%1$d) bytes", prg.length - 2 - codeSize - dataSize);
+                Con.info(" PRG start: $%04x", containers.get(0).getStartAddress());
+                Con.info(" PRG end:   $%04x", containers.get(containers.size() - 1).getEndAddress() - 1);
+                Con.info(" PRG size:  $%1$04x(%1$d) bytes, %2$d blocks", prg.length, (prg.length + 253) / 254);
+                Con.info("Disassembly");
+                Con.info(disasm.toString());
+            }
         }
         catch (final TokenizerException te)
         {
