@@ -18,15 +18,15 @@ package com.github.rjeschke.cetoneasm.actions;
 
 import com.github.rjeschke.cetoneasm.Action;
 import com.github.rjeschke.cetoneasm.AssemblerException;
-import com.github.rjeschke.cetoneasm.BinaryOperator;
 import com.github.rjeschke.cetoneasm.FileLocation;
 import com.github.rjeschke.cetoneasm.Runtime;
+import com.github.rjeschke.cetoneasm.UnaryOperator;
 
-public class BinaryOperatorAction extends Action
+public class UnaryOperatorAction extends Action
 {
-    private final BinaryOperator operator;
+    private final UnaryOperator operator;
 
-    public BinaryOperatorAction(final FileLocation location, final BinaryOperator operator)
+    public UnaryOperatorAction(final FileLocation location, final UnaryOperator operator)
     {
         super(location);
         this.operator = operator;
@@ -35,55 +35,24 @@ public class BinaryOperatorAction extends Action
     @Override
     public void run(final Runtime runtime) throws AssemblerException
     {
-        final long b = runtime.pop();
         final long a = runtime.pop();
         long c = 0;
         switch (this.operator)
         {
-        case ADD:
-            c = a + b;
+        case HIGH:
+            c = (a >> 8) & 255;
             break;
-        case SUB:
-            c = a - b;
+        case LOW:
+            c = a & 255;
             break;
-        case MUL:
-            c = a * b;
+        case NOT:
+            c = a == 0 ? 1 : 0;
             break;
-        case DIV:
-            c = a / b;
+        case NEG:
+            c = ~a;
             break;
-        case AND:
-            c = a & b;
-            break;
-        case OR:
-            c = a | b;
-            break;
-        case XOR:
-            c = a ^ b;
-            break;
-        case SHIFT_LEFT:
-            c = a << b;
-            break;
-        case SHIFT_RIGHT:
-            c = a >> b;
-            break;
-        case EQUAL:
-            c = a == b ? 1 : 0;
-            break;
-        case NOT_EQUAL:
-            c = a != b ? 1 : 0;
-            break;
-        case LESS_THAN:
-            c = a < b ? 1 : 0;
-            break;
-        case LESS_EQUAL:
-            c = a <= b ? 1 : 0;
-            break;
-        case GREATER_THAN:
-            c = a > b ? 1 : 0;
-            break;
-        case GREATER_EQUAL:
-            c = a >= b ? 1 : 0;
+        case MINUS:
+            c = -a;
             break;
         }
         runtime.push(c);
@@ -92,6 +61,6 @@ public class BinaryOperatorAction extends Action
     @Override
     public String toString()
     {
-        return "binary:" + this.operator;
+        return "unary:" + this.operator;
     }
 }

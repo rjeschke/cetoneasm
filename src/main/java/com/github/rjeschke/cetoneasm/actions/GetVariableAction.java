@@ -14,33 +14,32 @@
  * limitations under the License.
  */
 
-package com.github.rjeschke.cetoneasm;
+package com.github.rjeschke.cetoneasm.actions;
 
-public class Variable
+import com.github.rjeschke.cetoneasm.Action;
+import com.github.rjeschke.cetoneasm.AssemblerException;
+import com.github.rjeschke.cetoneasm.FileLocation;
+import com.github.rjeschke.cetoneasm.Runtime;
+
+public class GetVariableAction extends Action
 {
-    public long    value       = 0;
-    public boolean initialized = false;
+    private final String variableName;
 
-    public Variable()
+    public GetVariableAction(final FileLocation location, final String variableName)
     {
-
+        super(location);
+        this.variableName = variableName;
     }
 
-    public Variable(final long value)
+    @Override
+    public void run(final Runtime runtime) throws AssemblerException
     {
-        this.value = value;
-        this.initialized = true;
+        runtime.push(runtime.getVariable(this.variableName).value);
     }
 
     @Override
     public String toString()
     {
-        return "var:" + this.initialized + ":" + this.value;
-    }
-
-    public void set(final long value)
-    {
-        this.value = value;
-        this.initialized = true;
+        return "read:" + this.variableName;
     }
 }

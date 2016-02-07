@@ -49,7 +49,10 @@ public class Token
         SHIFT_LEFT,
         GREATER_THAN,
         GREATER_EQUAL,
-        SHIFT_RIGHT
+        SHIFT_RIGHT,
+        COMMA,
+        BRACE_OPEN,
+        BRACE_CLOSE
     }
 
     private final Token.Type   type;

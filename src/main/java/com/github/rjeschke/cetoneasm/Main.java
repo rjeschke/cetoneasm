@@ -62,6 +62,11 @@ public class Main
         {
             tok.open();
             final List<Action> actions = Parser.parse(tok);
+            System.out.println(actions);
+            final Runtime rt = new Runtime();
+            rt.testRun(actions);
+            System.out.println(rt.getVariable("@"));
+            System.out.println(rt.getVariable("VAR"));
         }
         catch (final TokenizerException te)
         {

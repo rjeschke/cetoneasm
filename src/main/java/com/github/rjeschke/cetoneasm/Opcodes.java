@@ -22,11 +22,13 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map.Entry;
 
 public class Opcodes
 {
-    public static final Opcode[]                      BY_CODE = new Opcode[256];
-    public static final HashMap<String, List<Opcode>> BY_NAME = new HashMap<String, List<Opcode>>();
+    public static final Opcode[]                                         BY_CODE        = new Opcode[256];
+    public static final HashMap<String, List<Opcode>>                    BY_NAME        = new HashMap<String, List<Opcode>>();
+    public static final HashMap<String, HashMap<AddressingMode, Opcode>> BY_NAME_MAPPED = new HashMap<String, HashMap<AddressingMode, Opcode>>();
 
     public static class Opcode
     {
@@ -108,6 +110,20 @@ public class Opcodes
                 if (BY_CODE[i] == null)
                 {
                     throw new IOException("Missing opcode definition for $" + Integer.toString(i, 16));
+                }
+            }
+
+            for (final Entry<String, List<Opcode>> e : BY_NAME.entrySet())
+            {
+                HashMap<AddressingMode, Opcode> map = BY_NAME_MAPPED.get(e.getKey());
+                if (map == null)
+                {
+                    map = new HashMap<AddressingMode, Opcode>();
+                    BY_NAME_MAPPED.put(e.getKey(), map);
+                }
+                for (final Opcode op : e.getValue())
+                {
+                    map.put(op.adressingMode, op);
                 }
             }
         }

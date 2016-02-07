@@ -21,25 +21,30 @@ import com.github.rjeschke.cetoneasm.AssemblerException;
 import com.github.rjeschke.cetoneasm.FileLocation;
 import com.github.rjeschke.cetoneasm.Runtime;
 
-public class AssignAction extends Action
+public class LoadNumberAction extends Action
 {
-    private final String variableName;
+    private final long value;
 
-    public AssignAction(final FileLocation location, final String variableName)
+    public LoadNumberAction(final FileLocation location, final long value)
     {
         super(location);
-        this.variableName = variableName;
+        this.value = value;
     }
 
     @Override
     public void run(final Runtime runtime) throws AssemblerException
     {
-        runtime.getOrCreateVar(this.variableName).set(runtime.pop());
+        runtime.push(this.value);
+    }
+
+    public long getValue()
+    {
+        return this.value;
     }
 
     @Override
     public String toString()
     {
-        return "assign:" + this.variableName;
+        return "load:" + this.value;
     }
 }

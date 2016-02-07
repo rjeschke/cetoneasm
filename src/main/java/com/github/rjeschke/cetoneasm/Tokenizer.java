@@ -327,6 +327,15 @@ public class Tokenizer
                 case '^':
                     this.consume();
                     return Token.tGeneric(this, Type.XOR);
+                case '(':
+                    this.consume();
+                    return Token.tGeneric(this, Type.BRACE_OPEN);
+                case ')':
+                    this.consume();
+                    return Token.tGeneric(this, Type.BRACE_CLOSE);
+                case ',':
+                    this.consume();
+                    return Token.tGeneric(this, Type.COMMA);
                 case '!':
                     this.consume();
                     if (this.peek() == '=')

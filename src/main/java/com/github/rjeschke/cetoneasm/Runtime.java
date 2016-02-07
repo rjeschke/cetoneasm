@@ -86,11 +86,15 @@ public class Runtime
         this.arithStack[this.arithSp++] = value;
     }
 
-    public void run(final List<Action> actions)
+    public void testRun(final List<Action> actions) throws AssemblerException
     {
         // 1. pass(es) .INCLUDE expansion
-        // 2. pass: dry run for variable initialization
-        // 3. pass: real run, uninitialized variables throw
-
+        // 2. Macro expansion
+        // 3. pass: dry run for variable initialization
+        // 4. pass: real run, uninitialized variables throw
+        for (final Action action : actions)
+        {
+            action.run(this);
+        }
     }
 }
