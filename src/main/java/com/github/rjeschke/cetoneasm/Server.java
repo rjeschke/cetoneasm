@@ -14,32 +14,15 @@
  * limitations under the License.
  */
 
-package com.github.rjeschke.cetoneasm.actions;
+package com.github.rjeschke.cetoneasm;
 
-import java.util.concurrent.atomic.AtomicLong;
-
-import com.github.rjeschke.cetoneasm.FileLocation;
-import com.github.rjeschke.cetoneasm.MetaAction;
-
-public class JumpLabelAction extends MetaAction
+public class Server
 {
-    private final static AtomicLong JUMP_COUNTER = new AtomicLong(0);
-    private final long              id;
+    private final Assembler assembler = new Assembler();
 
-    public JumpLabelAction(final FileLocation location)
+    public static void startServer(final int port)
     {
-        super(location);
-        this.id = JUMP_COUNTER.incrementAndGet();
+
     }
 
-    public long getID()
-    {
-        return this.id;
-    }
-
-    @Override
-    public String toString()
-    {
-        return "jump-label:" + this.id;
-    }
 }

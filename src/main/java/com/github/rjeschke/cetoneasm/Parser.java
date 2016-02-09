@@ -25,12 +25,17 @@ import com.github.rjeschke.cetoneasm.Token.Type;
 import com.github.rjeschke.cetoneasm.actions.AssembleOpcodeAction;
 import com.github.rjeschke.cetoneasm.actions.AssembleOpcodeAction.WidthType;
 import com.github.rjeschke.cetoneasm.actions.BinaryOperatorAction;
+import com.github.rjeschke.cetoneasm.actions.CallMacroAction;
 import com.github.rjeschke.cetoneasm.actions.ConditionalJumpAction;
 import com.github.rjeschke.cetoneasm.actions.DataStorageAction;
+import com.github.rjeschke.cetoneasm.actions.DefineMacroAction;
 import com.github.rjeschke.cetoneasm.actions.GetVariableAction;
-import com.github.rjeschke.cetoneasm.actions.JumpAction;
-import com.github.rjeschke.cetoneasm.actions.JumpLabelAction;
+import com.github.rjeschke.cetoneasm.actions.JumpIdAction;
+import com.github.rjeschke.cetoneasm.actions.JumpToIdAction;
 import com.github.rjeschke.cetoneasm.actions.LoadNumberAction;
+import com.github.rjeschke.cetoneasm.actions.MetaGotoAction;
+import com.github.rjeschke.cetoneasm.actions.MetaLabelAction;
+import com.github.rjeschke.cetoneasm.actions.RepeatedDataStorageAction;
 import com.github.rjeschke.cetoneasm.actions.SetLabelAction;
 import com.github.rjeschke.cetoneasm.actions.SetVariableAction;
 import com.github.rjeschke.cetoneasm.actions.StringStoreAction;
@@ -38,9 +43,12 @@ import com.github.rjeschke.cetoneasm.actions.UnaryOperatorAction;
 
 public class Parser
 {
-    private final List<Token> tokens;
-    private int               position    = 0;
-    private final Assembler   evalRuntime = new Assembler();
+    private final List<Token>             tokens;
+    private final List<GetVariableAction> getVariableActions = new ArrayList<GetVariableAction>();
+    private int                           position           = 0;
+    private final Assembler               evalRuntime        = new Assembler();
+    private boolean                       topLevel           = true;
+    private boolean                       inMacroDefinition  = false;
 
     private Parser(final List<Token> tokens)
     {
@@ -102,6 +110,20 @@ public class Parser
     private void parseDataStore(final List<Action> actions, final MetaCommand mc) throws AssemblerException
     {
         final FileLocation ds = this.getFileLocation();
+        final List<Action> count;
+        if (mc == MetaCommand.REPB || mc == MetaCommand.REPW)
+        {
+            count = this.parseExpression();
+            if (this.peek().getType() != Token.Type.COMMA)
+            {
+                throw new AssemblerException(this.getFileLocation(), "',' expected");
+            }
+            this.consume();
+        }
+        else
+        {
+            count = null;
+        }
         final List<List<Action>> expressions = new ArrayList<List<Action>>();
         for (;;)
         {
@@ -124,12 +146,19 @@ public class Parser
             }
             break;
         }
-        actions.add(new DataStorageAction(ds, mc == MetaCommand.DW, expressions));
+        if (mc == MetaCommand.DB || mc == MetaCommand.DW)
+        {
+            actions.add(new DataStorageAction(ds, mc == MetaCommand.DW, expressions));
+        }
+        else
+        {
+            actions.add(new RepeatedDataStorageAction(ds, mc == MetaCommand.REPW, count, expressions));
+        }
     }
 
     private void parseConditionalBlock(final List<Action> actions) throws AssemblerException
     {
-        final JumpLabelAction endLabel = new JumpLabelAction(this.getFileLocation());
+        final JumpIdAction endLabel = new JumpIdAction(this.getFileLocation());
         boolean hasElse = false;
         for (;;)
         {
@@ -151,7 +180,7 @@ public class Parser
                 }
                 hasElse = true;
                 this.parse(actions, "ELIF", "ELSE", "ENDIF");
-                actions.add(new JumpAction(this.getFileLocation(), endLabel.getID()));
+                actions.add(new JumpToIdAction(this.getFileLocation(), endLabel.getID()));
             }
             else
             {
@@ -159,15 +188,84 @@ public class Parser
                 {
                     throw new AssemblerException(this.getFileLocation(), mc + " after ELSE");
                 }
-                final JumpLabelAction endBlock = new JumpLabelAction(this.getFileLocation());
+                final JumpIdAction endBlock = new JumpIdAction(this.getFileLocation());
                 final List<Action> expr = this.parseExpression();
                 actions.add(new ConditionalJumpAction(this.getFileLocation(), endBlock.getID(), expr));
                 this.parse(actions, "ELIF", "ELSE", "ENDIF");
-                actions.add(new JumpAction(this.getFileLocation(), endLabel.getID()));
+                actions.add(new JumpToIdAction(this.getFileLocation(), endLabel.getID()));
                 actions.add(endBlock);
             }
         }
         actions.add(endLabel);
+    }
+
+    private void parseMacroDefinition(final List<Action> actions) throws AssemblerException
+    {
+        if (!this.topLevel)
+        {
+            throw new AssemblerException(this.getFileLocation(), "Macro definitions only allowed at top level");
+        }
+        final FileLocation def = this.getFileLocation();
+        if (this.peek().getType() != Token.Type.WORD)
+        {
+            throw new AssemblerException(this.getFileLocation(), "Identifier expected");
+        }
+        final String macroName = this.getStringValue();
+        final List<String> variableNames = new ArrayList<String>();
+        this.consume();
+        for (;;)
+        {
+            if (this.peek().getType() == Token.Type.COMMA)
+            {
+                this.consume();
+                if (this.peek().getType() != Token.Type.WORD)
+                {
+                    throw new AssemblerException(this.getFileLocation(), "Identifier expected");
+                }
+                variableNames.add(this.getStringValue());
+                this.consume();
+            }
+            else
+            {
+                break;
+            }
+        }
+        final List<Action> expression = this.parse(new ArrayList<Action>(), "ENDMACRO");
+        if (this.peek().getType() != Token.Type.META || !"ENDMACRO".equals(this.getStringValue()))
+        {
+            throw new AssemblerException(this.getFileLocation(), "ENDMACRO expected");
+        }
+        this.consume();
+        actions.add(new DefineMacroAction(def, macroName, variableNames, expression, this.getVariableActions));
+    }
+
+    private void parseCallMacro(final List<Action> actions) throws AssemblerException
+    {
+        if (this.inMacroDefinition)
+        {
+            throw new AssemblerException(this.getFileLocation(), ".CALL inside .MACRO is forbidden");
+        }
+        final FileLocation def = this.getFileLocation();
+        if (this.peek().getType() != Token.Type.WORD)
+        {
+            throw new AssemblerException(this.getFileLocation(), "Identifier expected");
+        }
+        final String macroName = this.getStringValue();
+        final List<List<Action>> arguments = new ArrayList<List<Action>>();
+        this.consume();
+        for (;;)
+        {
+            if (this.peek().getType() == Token.Type.COMMA)
+            {
+                this.consume();
+                arguments.add(this.parseExpression());
+            }
+            else
+            {
+                break;
+            }
+        }
+        actions.add(new CallMacroAction(def, macroName, arguments));
     }
 
     private void parseMeta(final List<Action> actions) throws AssemblerException
@@ -183,6 +281,14 @@ public class Parser
         case IF:
             this.parseConditionalBlock(actions);
             break;
+        case MACRO:
+            this.consume();
+            this.parseMacroDefinition(actions);
+            break;
+        case CALL:
+            this.consume();
+            this.parseCallMacro(actions);
+            break;
         case ELIF:
             throw new AssemblerException(this.getFileLocation(), "ELIF without IF");
         case ELSE:
@@ -191,10 +297,32 @@ public class Parser
             throw new AssemblerException(this.getFileLocation(), "ENDIF without IF");
         case ENDMACRO:
             throw new AssemblerException(this.getFileLocation(), "ENDMACRO without MACRO");
+        case ENDREP:
+            throw new AssemblerException(this.getFileLocation(), "ENDREP without REP");
         case DB:
         case DW:
+        case REPB:
+        case REPW:
             this.consume();
             this.parseDataStore(actions, mc);
+            break;
+        case LABEL:
+            this.consume();
+            if (this.peek().getType() != Token.Type.WORD)
+            {
+                throw new AssemblerException(this.getFileLocation(), "Identifier expected");
+            }
+            actions.add(new MetaLabelAction(this.getFileLocation(), this.getStringValue()));
+            this.consume();
+            break;
+        case GOTO:
+            this.consume();
+            if (this.peek().getType() != Token.Type.WORD)
+            {
+                throw new AssemblerException(this.getFileLocation(), "Identifier expected");
+            }
+            actions.add(new MetaGotoAction(this.getFileLocation(), this.getStringValue()));
+            this.consume();
             break;
         default:
             throw new AssemblerException(this.getFileLocation(), "Unimplemented meta command '" + mc + "'");
@@ -248,13 +376,17 @@ public class Parser
             switch (this.peek().getType())
             {
             case PC:
-                lActions.add(new GetVariableAction(this.getFileLocation(), "@"));
-                this.consume();
-                break;
             case WORD:
-                lActions.add(new GetVariableAction(this.getFileLocation(), this.getStringValue()));
+            {
+                final GetVariableAction gva = new GetVariableAction(this.getFileLocation(), this.getStringValue());
+                lActions.add(gva);
+                if (!this.topLevel)
+                {
+                    this.getVariableActions.add(gva);
+                }
                 this.consume();
                 break;
+            }
             case NUMBER:
                 lActions.add(new LoadNumberAction(this.getFileLocation(), this.peek().getLongValue()));
                 this.consume();
@@ -367,6 +499,7 @@ public class Parser
             case SCR_STRING:
                 nextUnrelated = true;
                 break;
+            case PC:
             case WORD:
             case SUB_WORD:
                 nextUnrelated = this.peek(1).getType() == Token.Type.ASSIGN;
@@ -581,6 +714,17 @@ public class Parser
 
     private List<Action> parse(final List<Action> actions, final String... endMetaMarker) throws AssemblerException
     {
+        final boolean wasTopLevel = this.topLevel;
+        final boolean wasMacroDefinition = this.inMacroDefinition;
+        if (endMetaMarker.length > 0)
+        {
+            if (!wasTopLevel)
+            {
+                this.getVariableActions.clear();
+            }
+            this.inMacroDefinition = endMetaMarker.length == 1 && endMetaMarker[0].equals("ENDMACRO");
+            this.topLevel = false;
+        }
         boolean finished = false;
         while (this.position < this.tokens.size() && !finished)
         {
@@ -626,6 +770,8 @@ public class Parser
                 break;
             }
         }
+        this.topLevel = wasTopLevel;
+        this.inMacroDefinition = wasMacroDefinition;
         return actions;
     }
 }

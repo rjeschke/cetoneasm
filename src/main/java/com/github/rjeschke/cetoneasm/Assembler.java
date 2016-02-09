@@ -22,43 +22,57 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
-import com.github.rjeschke.cetoneasm.actions.JumpLabelAction;
+import com.github.rjeschke.cetoneasm.actions.CallMacroAction;
+import com.github.rjeschke.cetoneasm.actions.DefineMacroAction;
+import com.github.rjeschke.cetoneasm.actions.JumpIdAction;
+import com.github.rjeschke.cetoneasm.actions.JumpToIdAction;
+import com.github.rjeschke.cetoneasm.actions.MetaGotoAction;
+import com.github.rjeschke.cetoneasm.actions.MetaLabelAction;
 import com.github.rjeschke.cetoneasm.actions.SetLabelAction;
 import com.github.rjeschke.cetoneasm.actions.SetVariableAction;
 import com.github.rjeschke.neetutils.collections.Colls;
 
 public class Assembler
 {
-    private final HashMap<String, Variable> variables          = new HashMap<String, Variable>();
-    private final HashMap<String, Variable> labels             = new HashMap<String, Variable>();
-    private final HashMap<Long, Integer>    jumpLabelToIndex   = new HashMap<Long, Integer>();
-    private final long[]                    arithStack         = new long[1024];
-    private int                             arithSp;
-    private Variable                        pcVariable         = null;
-    private final ArrayList<CodeContainer>  codeContainers     = new ArrayList<CodeContainer>();
-    private int                             passNumber         = 0;
-    private long                            jumpId             = -1;
-    private boolean                         throwIfUnitialized = false;
+    private final HashMap<String, Variable>          variables          = new HashMap<String, Variable>();
+    private final HashMap<String, Variable>          labels             = new HashMap<String, Variable>();
+    private final HashMap<Long, Integer>             jumpLabelToIndex   = new HashMap<Long, Integer>();
+    private final HashMap<String, Long>              metaJumpMap        = new HashMap<String, Long>();
+    private final HashMap<String, DefineMacroAction> definedMacros      = new HashMap<String, DefineMacroAction>();
+    private final long[]                             arithStack         = new long[1024];
+    private int                                      arithSp;
+    private Variable                                 pcVariable         = null;
+    private final ArrayList<CodeContainer>           codeContainers     = new ArrayList<CodeContainer>();
+    private int                                      passNumber         = 0;
+    private long                                     jumpId             = -1;
+    private boolean                                  throwIfUnitialized = false;
+    private String                                   parentLabel        = null;
 
-    private static String[]                 PASS_NAMES         = Colls.objArray(
-                                                                       "Resolve and import include files",
-                                                                       "Macro expansion",
-                                                                       "Variable and label gathering",
-                                                                       "Assembly warm up",
-                                                                       "First assembly pass",
-                                                                       "Final assembly pass");
+    private static String[]                          PASS_NAMES         = Colls.objArray(
+                                                                                "Resolve and import include files",
+                                                                                "Macro expansion",
+                                                                                "Variable and label gathering",
+                                                                                "Assembly warm up",
+                                                                                "First assembly pass",
+                                                                                "Final assembly pass");
 
     public Assembler()
     {
         this.init();
     }
 
-    private void init()
+    public void init()
     {
         this.variables.clear();
+        this.labels.clear();
+        this.jumpLabelToIndex.clear();
+        this.metaJumpMap.clear();
+        this.codeContainers.clear();
+        this.definedMacros.clear();
         this.variables.put("@", this.pcVariable = new Variable());
         this.arithSp = 0;
         this.jumpId = -1;
+        this.parentLabel = null;
     }
 
     private void startPass(final int index)
@@ -67,6 +81,7 @@ public class Assembler
 
         this.passNumber = index;
         this.jumpId = -1;
+        this.parentLabel = null;
 
         switch (index)
         {
@@ -75,7 +90,6 @@ public class Assembler
         case 1: // .CALL
             break;
         case 2: // Gather variables/labels
-            this.jumpLabelToIndex.clear();
             break;
         case 3: // Initial compile
             this.codeContainers.clear();
@@ -146,7 +160,12 @@ public class Assembler
 
     private void incPC() throws AssemblerException
     {
+        final int old = this.getPC();
         this.pcVariable.set((this.getPC() + 1) & 65535);
+        if (old > this.getPC())
+        {
+            throw new AssemblerException(null, "@ wrapped from $FFFF->$0000");
+        }
     }
 
     public int getPC() throws AssemblerException
@@ -160,24 +179,59 @@ public class Assembler
 
     public void setLabelAddress(final String labelName, final int pc) throws AssemblerException
     {
-        final Variable var = this.labels.get(labelName);
+        Variable var = null;
+
+        if (labelName.startsWith("_"))
+        {
+            if (this.parentLabel == null)
+            {
+                throw new AssemblerException(null, "Local label '" + labelName + "'without parent");
+            }
+            var = this.labels.get(this.parentLabel + "$$" + labelName);
+        }
+        else
+        {
+            var = this.labels.get(labelName);
+        }
+
         if (var == null)
         {
             throw new AssemblerException(null, "Undefined label '" + labelName + "'");
+        }
+        if (!labelName.contains("$$") && !labelName.startsWith("_"))
+        {
+            this.parentLabel = labelName;
         }
         var.set(pc);
     }
 
     public Variable getVariable(final String name) throws AssemblerException
     {
-        Variable var = this.variables.get(name);
-        if (var == null)
+        Variable var = null;
+        if (name.startsWith("_"))
         {
-            var = this.labels.get(name);
+            if (this.parentLabel == null)
+            {
+                throw new AssemblerException(null, "Local variable '" + name + "'without parent");
+            }
+            final String mangled = this.parentLabel + "$$" + name;
+            var = this.variables.get(mangled);
             if (var == null)
             {
-                throw new AssemblerException(null, "Undefined variable or label '" + name + "'");
+                var = this.labels.get(mangled);
             }
+        }
+        else
+        {
+            var = this.variables.get(name);
+            if (var == null)
+            {
+                var = this.labels.get(name);
+            }
+        }
+        if (var == null)
+        {
+            throw new AssemblerException(null, "Undefined variable or label '" + name + "'");
         }
         if (this.throwIfUnitialized && !var.isInitialized())
         {
@@ -186,13 +240,24 @@ public class Assembler
         return var;
     }
 
-    public void setVariableValue(final String name, final long value)
+    public void setVariableValue(final String name, final long value) throws AssemblerException
     {
-        Variable var = this.variables.get(name);
+        Variable var;
+        if (name.startsWith("_"))
+        {
+            if (this.parentLabel == null)
+            {
+                throw new AssemblerException(null, "Local variable '" + name + "'without parent");
+            }
+            var = this.variables.get(this.parentLabel + "$$" + name);
+        }
+        else
+        {
+            var = this.variables.get(name);
+        }
         if (var == null)
         {
-            var = new Variable();
-            this.variables.put(name, var);
+            throw new AssemblerException(null, "Undefined variable '" + name + "'");
         }
         var.set(value);
     }
@@ -231,31 +296,110 @@ public class Assembler
         {
             final ArrayList<Action> actions = new ArrayList<Action>(iActions);
 
+            // ////////////////////////////////////////////////////////////////
             // Pass 1: .INCLUDE
             this.startPass(0);
 
-            // Pass 2: .CALL
+            // ////////////////////////////////////////////////////////////////
+            // Pass 2: :MACRO, .CALL
             this.startPass(1);
-
-            // Pass 3: Gather variables/labels
-            this.startPass(2);
-
             for (int i = 0; i < actions.size(); i++)
             {
-                final Action action = actions.get(i);
-                if (action instanceof JumpLabelAction)
+                final Action action = currentAction = actions.get(i);
+                if (action instanceof DefineMacroAction)
                 {
-                    this.jumpLabelToIndex.put(((JumpLabelAction)action).getID(), i);
+                    final DefineMacroAction dma = (DefineMacroAction)action;
+                    if (this.definedMacros.containsKey(dma.getName()))
+                    {
+                        throw new AssemblerException(action.getLocation(), "Duplicate macro definition for '"
+                                + dma.getName() + "'");
+                    }
+                    this.definedMacros.put(dma.getName(), dma);
                     actions.remove(i--);
                 }
             }
+            Con.info("  Found %d macro definition(s)", this.definedMacros.size());
+            long id = 0;
+            for (int i = 0; i < actions.size(); i++)
+            {
+                final Action action = currentAction = actions.get(i);
+                if (action instanceof CallMacroAction)
+                {
+                    final CallMacroAction cma = (CallMacroAction)action;
+                    final DefineMacroAction dma = this.definedMacros.get(cma.getName());
+                    if (dma == null)
+                    {
+                        throw new AssemblerException(action.getLocation(), "Unknown macro '" + cma.getName() + "'");
+                    }
+                    final List<Action> expanded = dma.getMangledActions(cma.getArguments(), ++id, action.getLocation());
+                    actions.remove(i);
+                    actions.addAll(i, expanded);
+                    i += expanded.size() - 1;
+                }
+            }
 
+            // ////////////////////////////////////////////////////////////////
+            // Pass 3: Gather variables/labels
+            this.startPass(2);
+
+            // Transfrom MetaLabelAction to JumpIdAction
+            for (int i = 0; i < actions.size(); i++)
+            {
+                final Action action = currentAction = actions.get(i);
+                if (action instanceof MetaLabelAction)
+                {
+                    final String name = ((MetaLabelAction)action).getName();
+                    final JumpIdAction jump = new JumpIdAction(action.getLocation());
+                    this.metaJumpMap.put(name, jump.getID());
+                    actions.set(i, jump);
+                }
+            }
+            // Populate jumpLabelToIndex
+            for (int i = 0; i < actions.size(); i++)
+            {
+                final Action action = currentAction = actions.get(i);
+                if (action instanceof JumpIdAction)
+                {
+                    this.jumpLabelToIndex.put(((JumpIdAction)action).getID(), i);
+                    actions.remove(i--);
+                }
+            }
+            // Map .GOTO
+            for (int i = 0; i < actions.size(); i++)
+            {
+                final Action action = currentAction = actions.get(i);
+                if (action instanceof MetaGotoAction)
+                {
+                    final String name = ((MetaGotoAction)action).getName();
+                    if (!this.metaJumpMap.containsKey(name))
+                    {
+                        throw new AssemblerException(action.getLocation(), "Unknown .LABEL '" + name + "'");
+                    }
+                    actions.set(i, new JumpToIdAction(action.getLocation(), this.metaJumpMap.get(name).longValue()));
+                }
+            }
+            // Gather all declared variables and labels
+            String lastLabel = null;
             for (final Action action : actions)
             {
                 currentAction = action;
                 if (action instanceof SetVariableAction)
                 {
-                    final String varName = ((SetVariableAction)action).getVariableName();
+                    String varName = ((SetVariableAction)action).getVariableName();
+                    if (varName.startsWith("_"))
+                    {
+                        if (lastLabel == null)
+                        {
+                            throw new AssemblerException(action.getLocation(),
+                                    "Local label defined without parent label");
+                        }
+                        varName = lastLabel + "$$" + varName;
+                    }
+                    if (this.labels.containsKey(varName))
+                    {
+                        throw new AssemblerException(action.getLocation(),
+                                "Conflicting variable name '" + varName + "' (defined as label already)");
+                    }
                     if (!this.variables.containsKey(varName))
                     {
                         this.variables.put(varName, new Variable());
@@ -263,40 +407,50 @@ public class Assembler
                 }
                 else if (action instanceof SetLabelAction)
                 {
-                    final String varName = ((SetLabelAction)action).getLabelName();
-                    if (!this.labels.containsKey(varName))
+                    String labelName = ((SetLabelAction)action).getLabelName();
+
+                    if (labelName.startsWith("_"))
                     {
-                        this.labels.put(varName, new Variable());
+                        if (lastLabel == null)
+                        {
+                            throw new AssemblerException(action.getLocation(),
+                                    "Local label defined without parent label");
+                        }
+                        labelName = lastLabel + "$$" + labelName;
                     }
+                    else
+                    {
+                        lastLabel = labelName;
+                    }
+
+                    if (this.variables.containsKey(labelName))
+                    {
+                        throw new AssemblerException(action.getLocation(),
+                                "Conflicting label name '" + labelName + "' (defined as variable already)");
+                    }
+                    if (this.labels.containsKey(labelName))
+                    {
+                        throw new AssemblerException(action.getLocation(), "Duplicate label '" + labelName + "'");
+                    }
+                    this.labels.put(labelName, new Variable());
                 }
             }
 
+            // ////////////////////////////////////////////////////////////////
+            // Pass 4-6: Compile
             final ActionIterable iterable = new ActionIterable(actions, this);
-
-            // Pass 4: Compile
-            this.startPass(3);
-            for (final Action action : iterable)
+            for (int pnr = 3; pnr < 6; pnr++)
             {
-                currentAction = action;
-                action.run(this);
+                this.startPass(pnr);
+                for (final Action action : iterable)
+                {
+                    currentAction = action;
+                    action.run(this);
+                }
             }
 
-            // Pass 5: Compile, throw if unitialized
-            this.startPass(4);
-            for (final Action action : iterable)
-            {
-                currentAction = action;
-                action.run(this);
-            }
-
-            // Pass 6: Compile, throw if unitialized, look-ahead settling
-            this.startPass(5);
-            for (final Action action : iterable)
-            {
-                currentAction = action;
-                action.run(this);
-            }
-
+            // ////////////////////////////////////////////////////////////////
+            // Finished
             final ArrayList<CodeContainer> ret = new ArrayList<CodeContainer>(this.codeContainers);
             Collections.sort(ret);
             return ret;
@@ -305,7 +459,8 @@ public class Assembler
         {
             if (ae.getLocation() == null && currentAction != null)
             {
-                throw new AssemblerException(currentAction.getLocation(), ae.getMessage(), ae.getCause());
+                throw new AssemblerException(currentAction.getLocation(), ae.getMessage(),
+                        ae.getCause() != null ? ae.getCause() : ae);
             }
             throw ae;
         }

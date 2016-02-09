@@ -16,43 +16,30 @@
 
 package com.github.rjeschke.cetoneasm.actions;
 
-import com.github.rjeschke.cetoneasm.Action;
-import com.github.rjeschke.cetoneasm.Assembler;
-import com.github.rjeschke.cetoneasm.AssemblerException;
+import java.util.concurrent.atomic.AtomicLong;
+
 import com.github.rjeschke.cetoneasm.FileLocation;
+import com.github.rjeschke.cetoneasm.MetaAction;
 
-public class SetVariableAction extends Action
+public class JumpIdAction extends MetaAction
 {
-    private String variableName;
+    private final static AtomicLong JUMP_COUNTER = new AtomicLong(0);
+    private final long              id;
 
-    public SetVariableAction(final FileLocation location, final String variableName)
+    public JumpIdAction(final FileLocation location)
     {
         super(location);
-        this.variableName = variableName;
+        this.id = JUMP_COUNTER.incrementAndGet();
     }
 
-    @Override
-    public void run(final Assembler assembler) throws AssemblerException
+    public long getID()
     {
-        assembler.setVariableValue(this.variableName, assembler.pop());
-    }
-
-    public String getVariableName()
-    {
-        return this.variableName;
-    }
-
-    public void makeLocal()
-    {
-        if (!this.variableName.startsWith("_"))
-        {
-            this.variableName = "__" + this.variableName;
-        }
+        return this.id;
     }
 
     @Override
     public String toString()
     {
-        return "assign:" + this.variableName;
+        return "jump-label:" + this.id;
     }
 }

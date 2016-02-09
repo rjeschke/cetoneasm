@@ -17,13 +17,13 @@
 package com.github.rjeschke.cetoneasm.actions;
 
 import com.github.rjeschke.cetoneasm.Action;
+import com.github.rjeschke.cetoneasm.Assembler;
 import com.github.rjeschke.cetoneasm.AssemblerException;
 import com.github.rjeschke.cetoneasm.FileLocation;
-import com.github.rjeschke.cetoneasm.Assembler;
 
 public class SetLabelAction extends Action
 {
-    private final String labelName;
+    private String labelName;
 
     public SetLabelAction(final FileLocation location, final String labelName)
     {
@@ -40,6 +40,14 @@ public class SetLabelAction extends Action
     public String getLabelName()
     {
         return this.labelName;
+    }
+
+    public void makeLocal()
+    {
+        if (!this.labelName.startsWith("_"))
+        {
+            this.labelName = "__" + this.labelName;
+        }
     }
 
     @Override

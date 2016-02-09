@@ -16,43 +16,31 @@
 
 package com.github.rjeschke.cetoneasm.actions;
 
+import java.util.List;
+
 import com.github.rjeschke.cetoneasm.Action;
-import com.github.rjeschke.cetoneasm.Assembler;
-import com.github.rjeschke.cetoneasm.AssemblerException;
 import com.github.rjeschke.cetoneasm.FileLocation;
+import com.github.rjeschke.cetoneasm.MetaAction;
 
-public class SetVariableAction extends Action
+public class CallMacroAction extends MetaAction
 {
-    private String variableName;
+    private final String             name;
+    private final List<List<Action>> arguments;
 
-    public SetVariableAction(final FileLocation location, final String variableName)
+    public CallMacroAction(final FileLocation location, final String name, final List<List<Action>> arguments)
     {
         super(location);
-        this.variableName = variableName;
+        this.name = name;
+        this.arguments = arguments;
     }
 
-    @Override
-    public void run(final Assembler assembler) throws AssemblerException
+    public String getName()
     {
-        assembler.setVariableValue(this.variableName, assembler.pop());
+        return this.name;
     }
 
-    public String getVariableName()
+    public List<List<Action>> getArguments()
     {
-        return this.variableName;
-    }
-
-    public void makeLocal()
-    {
-        if (!this.variableName.startsWith("_"))
-        {
-            this.variableName = "__" + this.variableName;
-        }
-    }
-
-    @Override
-    public String toString()
-    {
-        return "assign:" + this.variableName;
+        return this.arguments;
     }
 }

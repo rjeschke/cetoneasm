@@ -64,6 +64,10 @@ public class Token
     {
         this.type = type;
         this.location = location;
+        if (type == Type.PC)
+        {
+            this.stringValue = "@";
+        }
     }
 
     static Token tGeneric(final Tokenizer t, final Token.Type type)

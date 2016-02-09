@@ -14,42 +14,23 @@
  * limitations under the License.
  */
 
-package com.github.rjeschke.cetoneasm;
+package com.github.rjeschke.cetoneasm.actions;
 
-import java.util.HashMap;
+import com.github.rjeschke.cetoneasm.FileLocation;
+import com.github.rjeschke.cetoneasm.MetaAction;
 
-public enum MetaCommand
+public class MetaLabelAction extends MetaAction
 {
-    INCLUDE,
-    BINCLUDE,
-    DB,
-    DW,
-    REPB,
-    REPW,
-    IF,
-    ELIF,
-    ELSE,
-    ENDIF,
-    REP,
-    ENDREP,
-    MACRO,
-    ENDMACRO,
-    CALL,
-    LABEL,
-    GOTO;
+    private final String name;
 
-    private final static HashMap<String, MetaCommand> MAP = new HashMap<String, MetaCommand>();
-
-    static
+    public MetaLabelAction(final FileLocation location, final String name)
     {
-        for (final MetaCommand mc : MetaCommand.values())
-        {
-            MAP.put(mc.toString(), mc);
-        }
+        super(location);
+        this.name = name;
     }
 
-    public static MetaCommand byName(final String name)
+    public String getName()
     {
-        return MAP.get(name);
+        return this.name;
     }
 }

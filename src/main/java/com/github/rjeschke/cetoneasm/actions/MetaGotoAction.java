@@ -16,30 +16,21 @@
 
 package com.github.rjeschke.cetoneasm.actions;
 
-import com.github.rjeschke.cetoneasm.Action;
-import com.github.rjeschke.cetoneasm.Assembler;
-import com.github.rjeschke.cetoneasm.AssemblerException;
 import com.github.rjeschke.cetoneasm.FileLocation;
+import com.github.rjeschke.cetoneasm.MetaAction;
 
-public class JumpAction extends Action
+public class MetaGotoAction extends MetaAction
 {
-    private final long jumpId;
+    private final String name;
 
-    public JumpAction(final FileLocation location, final long jumpId)
+    public MetaGotoAction(final FileLocation location, final String name)
     {
         super(location);
-        this.jumpId = jumpId;
+        this.name = name;
     }
 
-    @Override
-    public void run(final Assembler assembler) throws AssemblerException
+    public String getName()
     {
-        assembler.setJumpId(this.jumpId);
-    }
-
-    @Override
-    public String toString()
-    {
-        return "jump-to:" + this.jumpId;
+        return this.name;
     }
 }

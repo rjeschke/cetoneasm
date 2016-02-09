@@ -17,13 +17,13 @@
 package com.github.rjeschke.cetoneasm.actions;
 
 import com.github.rjeschke.cetoneasm.Action;
+import com.github.rjeschke.cetoneasm.Assembler;
 import com.github.rjeschke.cetoneasm.AssemblerException;
 import com.github.rjeschke.cetoneasm.FileLocation;
-import com.github.rjeschke.cetoneasm.Assembler;
 
 public class GetVariableAction extends Action
 {
-    private final String variableName;
+    private String variableName;
 
     public GetVariableAction(final FileLocation location, final String variableName)
     {
@@ -35,6 +35,19 @@ public class GetVariableAction extends Action
     public void run(final Assembler assembler) throws AssemblerException
     {
         assembler.push(assembler.getVariable(this.variableName).get());
+    }
+
+    public void makeLocal()
+    {
+        if (!this.variableName.startsWith("_"))
+        {
+            this.variableName = "__" + this.variableName;
+        }
+    }
+
+    public String getVariableName()
+    {
+        return this.variableName;
     }
 
     @Override

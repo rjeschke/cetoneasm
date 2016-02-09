@@ -21,38 +21,25 @@ import com.github.rjeschke.cetoneasm.Assembler;
 import com.github.rjeschke.cetoneasm.AssemblerException;
 import com.github.rjeschke.cetoneasm.FileLocation;
 
-public class SetVariableAction extends Action
+public class JumpToIdAction extends Action
 {
-    private String variableName;
+    private final long jumpId;
 
-    public SetVariableAction(final FileLocation location, final String variableName)
+    public JumpToIdAction(final FileLocation location, final long jumpId)
     {
         super(location);
-        this.variableName = variableName;
+        this.jumpId = jumpId;
     }
 
     @Override
     public void run(final Assembler assembler) throws AssemblerException
     {
-        assembler.setVariableValue(this.variableName, assembler.pop());
-    }
-
-    public String getVariableName()
-    {
-        return this.variableName;
-    }
-
-    public void makeLocal()
-    {
-        if (!this.variableName.startsWith("_"))
-        {
-            this.variableName = "__" + this.variableName;
-        }
+        assembler.setJumpId(this.jumpId);
     }
 
     @Override
     public String toString()
     {
-        return "assign:" + this.variableName;
+        return "jump-to:" + this.jumpId;
     }
 }

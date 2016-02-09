@@ -1,0 +1,151 @@
+/*
+ * Copyright (C) 2016 René Jeschke <rene_jeschke@yahoo.de>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.github.rjeschke.cetoneasm.actions;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+
+import com.github.rjeschke.cetoneasm.Action;
+import com.github.rjeschke.cetoneasm.AssemblerException;
+import com.github.rjeschke.cetoneasm.FileLocation;
+import com.github.rjeschke.cetoneasm.MetaAction;
+
+public class DefineMacroAction extends MetaAction
+{
+    private final String                  name;
+    private final List<String>            arguments;
+    private final List<Action>            actions;
+    private final List<GetVariableAction> getVariableActions;
+
+    public DefineMacroAction(final FileLocation location, final String name, final List<String> arguments,
+            final List<Action> actions, final List<GetVariableAction> getVariableActions)
+    {
+        super(location);
+        this.name = name;
+        this.arguments = arguments;
+        this.actions = actions;
+        this.getVariableActions = new ArrayList<GetVariableAction>(getVariableActions);
+
+        this.prepare();
+    }
+
+    private void prepare()
+    {
+        final HashSet<String> def = new HashSet<String>(this.arguments);
+        for (final Action a : this.actions)
+        {
+            if (a instanceof SetVariableAction)
+            {
+                def.add(((SetVariableAction)a).getVariableName());
+            }
+            else if (a instanceof SetLabelAction)
+            {
+                def.add(((SetLabelAction)a).getLabelName());
+            }
+        }
+
+        for (final GetVariableAction gva : this.getVariableActions)
+        {
+            if (def.contains(gva.getVariableName()))
+            {
+                gva.makeLocal();
+            }
+        }
+
+        for (final Action a : this.actions)
+        {
+            if (a instanceof SetVariableAction)
+            {
+                final SetVariableAction sva = (SetVariableAction)a;
+                if (def.contains(sva.getVariableName()))
+                {
+                    sva.makeLocal();
+                }
+            }
+            else if (a instanceof SetLabelAction)
+            {
+                final SetLabelAction sla = (SetLabelAction)a;
+                if (def.contains(sla.getLabelName()))
+                {
+                    sla.makeLocal();
+                }
+            }
+        }
+
+        for (int i = 0; i < this.arguments.size(); i++)
+        {
+            this.arguments.set(i, "__" + this.arguments.get(i));
+        }
+    }
+
+    public List<Action> getMangledActions(final List<List<Action>> args, final long id, final FileLocation caller)
+            throws AssemblerException
+    {
+        final ArrayList<Action> ret = new ArrayList<Action>();
+
+        if (args.size() != this.arguments.size())
+        {
+            throw new AssemblerException(caller, "Argument count mismatch, expected " + this.arguments.size()
+                    + ", got " + args.size());
+        }
+
+        ret.add(new SetLabelAction(caller, this.name + "$" + id));
+
+        // Create args assignment
+        for (int i = 0; i < this.arguments.size(); i++)
+        {
+            ret.addAll(args.get(i));
+            ret.add(new SetVariableAction(this.getLocation(), this.arguments.get(i)));
+        }
+
+        ret.addAll(this.actions);
+
+        return ret;
+    }
+
+    public List<String> getDefinedVariables()
+    {
+        final HashSet<String> def = new HashSet<String>();
+        for (final Action a : this.actions)
+        {
+            if (a instanceof SetVariableAction)
+            {
+                def.add(((SetVariableAction)a).getVariableName());
+            }
+        }
+        return new ArrayList<String>(def);
+    }
+
+    public List<String> getDefinedLabels()
+    {
+        final HashSet<String> def = new HashSet<String>();
+        for (final Action a : this.actions)
+        {
+            if (a instanceof SetLabelAction)
+            {
+                def.add(((SetLabelAction)a).getLabelName());
+            }
+        }
+        return new ArrayList<String>(def);
+    }
+
+    public String getName()
+    {
+        return this.name;
+    }
+}
