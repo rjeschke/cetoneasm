@@ -17,6 +17,7 @@
 package com.github.rjeschke.cetoneasm;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -40,7 +41,8 @@ public class Assembler
     private final HashMap<String, Variable>          labels             = new HashMap<String, Variable>();
     private final HashMap<String, DefineMacroAction> definedMacros      = new HashMap<String, DefineMacroAction>();
     private int[]                                    jumpTable;
-    private int[]                                    counters;
+    private int[]                                    jumpCount;
+    private int[]                                    counterTable;
     private final long[]                             arithStack         = new long[1024];
     private int                                      arithSp;
     private Variable                                 pcVariable         = null;
@@ -68,7 +70,8 @@ public class Assembler
         this.variables.clear();
         this.labels.clear();
         this.jumpTable = null;
-        this.counters = null;
+        this.jumpCount = null;
+        this.counterTable = null;
         this.codeContainers.clear();
         this.definedMacros.clear();
         this.variables.put("@", this.pcVariable = new Variable());
@@ -94,13 +97,17 @@ public class Assembler
         case 2: // Gather variables/labels
             break;
         case 3: // Initial compile
+            Arrays.fill(this.jumpCount, 0);
             this.codeContainers.clear();
             this.pcVariable.reset();
             this.arithSp = 0;
             this.throwIfUnitialized = false;
             break;
         case 4: // First real compilation
+            Arrays.fill(this.jumpCount, 0);
+            //$FALL-THROUGH$
         case 5: // Final compilation
+            Arrays.fill(this.jumpCount, 0);
             this.codeContainers.clear();
             this.pcVariable.reset();
             this.arithSp = 0;
@@ -167,12 +174,12 @@ public class Assembler
 
     public void setCounter(final int id, final int value)
     {
-        this.counters[id] = value;
+        this.counterTable[id] = value;
     }
 
     public int getCounter(final int id)
     {
-        return this.counters[id];
+        return this.counterTable[id];
     }
 
     private void incPC() throws AssemblerException
@@ -388,7 +395,8 @@ public class Assembler
                 }
             }
             this.jumpTable = new int[maxJumpId + 1];
-            this.counters = new int[maxCounterId + 1];
+            this.jumpCount = new int[this.jumpTable.length];
+            this.counterTable = new int[maxCounterId + 1];
             // Populate jumpTable
             for (int i = 0; i < actions.size(); i++)
             {
@@ -553,6 +561,10 @@ public class Assembler
                 if (this.assembler.jumpId >= 0)
                 {
                     this.index = this.assembler.jumpTable[this.assembler.jumpId];
+                    if (++this.assembler.jumpCount[this.assembler.jumpId] > (1 << 24))
+                    {
+                        //
+                    }
                     this.assembler.jumpId = -1;
                 }
                 return this.actions.get(this.index++);

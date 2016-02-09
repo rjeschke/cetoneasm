@@ -273,6 +273,44 @@ public class Parser
         actions.add(new CallMacroAction(def, macroName, arguments));
     }
 
+    private void parseRep(final List<Action> actions) throws AssemblerException
+    {
+        final FileLocation fl = this.getFileLocation();
+        actions.addAll(this.parseExpression());
+        final int cid = CounterState.get().newId();
+        final JumpIdAction start = new JumpIdAction(fl);
+        final JumpIdAction end = new JumpIdAction(fl);
+        actions.add(new CounterSetAction(fl, cid));
+        actions.add(start);
+        actions.add(new CounterCompareAction(fl, cid, end.getID()));
+        this.parse(actions, "ENDREP");
+        actions.add(new CounterDecrementAction(this.getFileLocation(), cid, start.getID()));
+        actions.add(end);
+        if (this.peek().getType() != Token.Type.META || !"ENDREP".equals(this.getStringValue()))
+        {
+            throw new AssemblerException(this.getFileLocation(), "ENDREP expected");
+        }
+        this.consume();
+    }
+
+    private void parseWhile(final List<Action> actions) throws AssemblerException
+    {
+        final FileLocation fl = this.getFileLocation();
+        final JumpIdAction start = new JumpIdAction(fl);
+        final JumpIdAction end = new JumpIdAction(fl);
+        actions.add(start);
+        actions.addAll(this.parseExpression());
+        actions.add(new ConditionalJumpAction(fl, end.getID()));
+        this.parse(actions, "ENDWHILE");
+        actions.add(new JumpToIdAction(this.getFileLocation(), start.getID()));
+        actions.add(end);
+        if (this.peek().getType() != Token.Type.META || !"ENDWHILE".equals(this.getStringValue()))
+        {
+            throw new AssemblerException(this.getFileLocation(), "ENDWHILE expected");
+        }
+        this.consume();
+    }
+
     private void parseMeta(final List<Action> actions) throws AssemblerException
     {
         final MetaCommand mc = MetaCommand.byName(this.peek().getStringValue());
@@ -294,6 +332,14 @@ public class Parser
             this.consume();
             this.parseCallMacro(actions);
             break;
+        case REP:
+            this.consume();
+            this.parseRep(actions);
+            break;
+        case WHILE:
+            this.consume();
+            this.parseWhile(actions);
+            break;
         case ELIF:
             throw new AssemblerException(this.getFileLocation(), "ELIF without IF");
         case ELSE:
@@ -304,6 +350,8 @@ public class Parser
             throw new AssemblerException(this.getFileLocation(), "ENDMACRO without MACRO");
         case ENDREP:
             throw new AssemblerException(this.getFileLocation(), "ENDREP without REP");
+        case ENDWHILE:
+            throw new AssemblerException(this.getFileLocation(), "ENDWHILE without WHILE");
         case DB:
         case DW:
         case REPB:
