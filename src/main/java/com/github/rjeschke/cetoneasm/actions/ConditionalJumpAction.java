@@ -16,8 +16,6 @@
 
 package com.github.rjeschke.cetoneasm.actions;
 
-import java.util.List;
-
 import com.github.rjeschke.cetoneasm.Action;
 import com.github.rjeschke.cetoneasm.Assembler;
 import com.github.rjeschke.cetoneasm.AssemblerException;
@@ -25,28 +23,26 @@ import com.github.rjeschke.cetoneasm.FileLocation;
 
 public class ConditionalJumpAction extends Action
 {
-    private final long         jumpId;
-    private final List<Action> expression;
+    private final long jumpId;
 
-    public ConditionalJumpAction(final FileLocation location, final long jumpId, final List<Action> expression)
+    public ConditionalJumpAction(final FileLocation location, final long jumpId)
     {
         super(location);
         this.jumpId = jumpId;
-        this.expression = expression;
     }
 
     @Override
     public void run(final Assembler assembler) throws AssemblerException
     {
-        if (assembler.evalExpression(this.expression) == 0)
+        if (assembler.pop() == 0)
         {
-            assembler.setJumpId(this.jumpId);
+            assembler.setJump(this.jumpId);
         }
     }
 
     @Override
     public String toString()
     {
-        return "conditional:" + this.jumpId + ";" + this.expression;
+        return "conditional:" + this.jumpId;
     }
 }

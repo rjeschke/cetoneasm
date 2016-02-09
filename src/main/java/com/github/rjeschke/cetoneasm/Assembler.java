@@ -40,6 +40,7 @@ public class Assembler
     private final HashMap<Long, Integer>             jumpLabelToIndex   = new HashMap<Long, Integer>();
     private final HashMap<String, Long>              metaJumpMap        = new HashMap<String, Long>();
     private final HashMap<String, DefineMacroAction> definedMacros      = new HashMap<String, DefineMacroAction>();
+    private final HashMap<Long, Long>                counterMap         = new HashMap<Long, Long>();
     private final long[]                             arithStack         = new long[1024];
     private int                                      arithSp;
     private Variable                                 pcVariable         = null;
@@ -123,7 +124,7 @@ public class Assembler
         return this.passNumber;
     }
 
-    public void setJumpId(final long id)
+    public void setJump(final long id)
     {
         this.jumpId = id;
     }
@@ -162,6 +163,17 @@ public class Assembler
     {
         this.emmitDataByte(value & 255);
         this.emmitDataByte((value >> 8) & 255);
+    }
+
+    public void setCounter(final long id, final long value)
+    {
+        this.counterMap.put(id, value);
+    }
+
+    public long getCounter(final long id)
+    {
+        final Long value = this.counterMap.get(id);
+        return value != null ? value.longValue() : 0;
     }
 
     private void incPC() throws AssemblerException
@@ -443,6 +455,9 @@ public class Assembler
             }
             Con.info("  %d variable(s), %d label(s), %d .LABEL(s)", this.variables.size() - 1, this.labels.size(),
                     this.metaJumpMap.size());
+
+            Con.info(actions.toString());
+
             // ////////////////////////////////////////////////////////////////
             // Pass 4-6: Compile
             final ActionIterable iterable = new ActionIterable(actions, this);

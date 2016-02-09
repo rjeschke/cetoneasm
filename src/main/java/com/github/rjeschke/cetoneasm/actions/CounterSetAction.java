@@ -21,25 +21,25 @@ import com.github.rjeschke.cetoneasm.Assembler;
 import com.github.rjeschke.cetoneasm.AssemblerException;
 import com.github.rjeschke.cetoneasm.FileLocation;
 
-public class JumpToIdAction extends Action
+public class CounterSetAction extends Action
 {
-    private final long jumpId;
+    private final long id;
 
-    public JumpToIdAction(final FileLocation location, final long jumpId)
+    public CounterSetAction(final FileLocation location, final long id)
     {
         super(location);
-        this.jumpId = jumpId;
+        this.id = id;
     }
 
     @Override
     public void run(final Assembler assembler) throws AssemblerException
     {
-        assembler.setJump(this.jumpId);
+        assembler.setCounter(this.id, assembler.pop());
     }
 
     @Override
     public String toString()
     {
-        return "jump-to:" + this.jumpId;
+        return "counter-set:" + this.id;
     }
 }

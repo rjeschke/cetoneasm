@@ -134,7 +134,7 @@ Common pitfalls and quirks:
 * `.GOTO` can be used safely to exit any kind of control flow block (even `.REP`) 
 * having labels and variables of the same name is forbidden *(makes sense somehow^^)* 
 * `.LABEL` does not get mangled in `.MACRO` so I recommend *not* to use it inside
-  or macros *(didn't find the need for this yet)*
+  of macros *(didn't find the need for this yet)*
 * it is possible to read/modify local macro variables after macro expansion, as those
   do not contain unusable identifier characters and therefore leak
 * there is no need to use local variables or labels inside of `.MACRO` as everything
@@ -192,8 +192,8 @@ by their outcome.
 The third pass now gathers all defined labels and variables and creates local
 variable/label mangling.
 
-After the third pass we end up with a neat, flat list of actions that just can
-be interpreted.
+After the third pass we end up with a neat, (nearly) flat list of actions that
+just can be interpreted.
 
 **Why 3(!) assembly passes?**
 

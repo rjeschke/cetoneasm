@@ -17,15 +17,14 @@
 package com.github.rjeschke.cetoneasm.actions;
 
 import java.util.HashMap;
-import java.util.List;
 
 import com.github.rjeschke.cetoneasm.Action;
 import com.github.rjeschke.cetoneasm.AddressingMode;
+import com.github.rjeschke.cetoneasm.Assembler;
 import com.github.rjeschke.cetoneasm.AssemblerException;
 import com.github.rjeschke.cetoneasm.FileLocation;
 import com.github.rjeschke.cetoneasm.Opcodes;
 import com.github.rjeschke.cetoneasm.Opcodes.Opcode;
-import com.github.rjeschke.cetoneasm.Assembler;
 
 public class AssembleOpcodeAction extends Action
 {
@@ -36,41 +35,40 @@ public class AssembleOpcodeAction extends Action
         ABSOLUTE_Y
     }
 
-    private final String       mnemonic;
-    private final Opcode       opcode;
-    private final List<Action> expression;
-    private final WidthType    widthType;
+    private final String    mnemonic;
+    private final Opcode    opcode;
+    private final WidthType widthType;
 
     private AssembleOpcodeAction(final FileLocation location, final String mnemonic, final Opcode opcode,
-            final WidthType widthtype, final List<Action> expression)
+            final WidthType widthtype)
     {
         super(location);
         this.mnemonic = mnemonic;
         this.opcode = opcode;
         this.widthType = widthtype;
-        this.expression = expression;
     }
 
-    public AssembleOpcodeAction(final FileLocation location, final String opcode, final List<Action> expression)
+    // public AssembleOpcodeAction(final FileLocation location, final String
+    // opcode)
+    // {
+    // this(location, opcode, null, null);
+    // }
+    //
+    public AssembleOpcodeAction(final FileLocation location, final String opcode, final WidthType widthtype)
     {
-        this(location, opcode, null, null, expression);
+        this(location, opcode, null, widthtype);
     }
 
-    public AssembleOpcodeAction(final FileLocation location, final String opcode, final WidthType widthtype,
-            final List<Action> expression)
+    public AssembleOpcodeAction(final FileLocation location, final Opcode opcode)
     {
-        this(location, opcode, null, widthtype, expression);
-    }
-
-    public AssembleOpcodeAction(final FileLocation location, final Opcode opcode, final List<Action> expression)
-    {
-        this(location, null, opcode, null, expression);
+        this(location, null, opcode, null);
     }
 
     @Override
     public void run(final Assembler assembler) throws AssemblerException
     {
-        final int address = this.expression != null ? ((int)assembler.evalExpression(this.expression) & 0xffff) : 0;
+        final int address = this.opcode != null && this.opcode.adressingMode != AddressingMode.IMPLIED
+                ? (int)assembler.pop() & 0xffff : 0;
         if (this.opcode != null)
         {
             assembler.emmitByte(this.opcode.value);
@@ -152,8 +150,6 @@ public class AssembleOpcodeAction extends Action
                 sb.append(this.widthType);
             }
         }
-        sb.append(';');
-        sb.append(this.expression);
         return sb.toString();
     }
 }

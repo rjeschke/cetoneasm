@@ -21,25 +21,33 @@ import com.github.rjeschke.cetoneasm.Assembler;
 import com.github.rjeschke.cetoneasm.AssemblerException;
 import com.github.rjeschke.cetoneasm.FileLocation;
 
-public class JumpToIdAction extends Action
+public class StoreDataAction extends Action
 {
-    private final long jumpId;
+    private final boolean storeWord;
 
-    public JumpToIdAction(final FileLocation location, final long jumpId)
+    public StoreDataAction(final FileLocation location, final boolean storeWord)
     {
         super(location);
-        this.jumpId = jumpId;
+        this.storeWord = storeWord;
     }
 
     @Override
     public void run(final Assembler assembler) throws AssemblerException
     {
-        assembler.setJump(this.jumpId);
+        final int value = (int)assembler.pop() & 0xffff;
+        if (this.storeWord)
+        {
+            assembler.emmitDataWord(value);
+        }
+        else
+        {
+            assembler.emmitDataByte(value);
+        }
     }
 
     @Override
     public String toString()
     {
-        return "jump-to:" + this.jumpId;
+        return "store:" + (this.storeWord ? "word" : "byte");
     }
 }

@@ -92,6 +92,7 @@ public class Main
         Con.initialize();
         Con.info("cetoneasm v1.0, (c) 2016 René 'Neotec/Cetone' Jeschke");
         Con.info("-----------------------------------------------------");
+        Parser.reset();
         final Config config = new Config();
         final Assembler rt = new Assembler();
         final Tokenizer tok = new Tokenizer(config, "/home/rjeschke/Dropbox/testing.casm");
