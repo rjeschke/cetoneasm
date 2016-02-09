@@ -36,7 +36,12 @@ public enum MetaCommand
     ENDMACRO,
     CALL,
     LABEL,
-    GOTO;
+    GOTO,
+    WHILE,
+    ENDWHILE,
+    INFO,
+    WARN,
+    ERROR;
 
     private final static HashMap<String, MetaCommand> MAP = new HashMap<String, MetaCommand>();
 
