@@ -23,9 +23,9 @@ import com.github.rjeschke.cetoneasm.FileLocation;
 
 public class CounterSetAction extends Action
 {
-    private final long id;
+    private final int id;
 
-    public CounterSetAction(final FileLocation location, final long id)
+    public CounterSetAction(final FileLocation location, final int id)
     {
         super(location);
         this.id = id;
@@ -34,7 +34,12 @@ public class CounterSetAction extends Action
     @Override
     public void run(final Assembler assembler) throws AssemblerException
     {
-        assembler.setCounter(this.id, assembler.pop());
+        assembler.setCounter(this.id, (int)assembler.pop());
+    }
+
+    public int getID()
+    {
+        return this.id;
     }
 
     @Override

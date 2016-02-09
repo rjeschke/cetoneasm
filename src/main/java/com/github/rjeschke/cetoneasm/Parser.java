@@ -19,7 +19,6 @@ package com.github.rjeschke.cetoneasm;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
 
 import com.github.rjeschke.cetoneasm.Opcodes.Opcode;
 import com.github.rjeschke.cetoneasm.Token.Type;
@@ -46,8 +45,6 @@ import com.github.rjeschke.cetoneasm.actions.WriteStringAction;
 
 public class Parser
 {
-    // TODO threadlocal!
-    private final static AtomicLong       COUNTER            = new AtomicLong(0);
     private final List<Token>             tokens;
     private final List<GetVariableAction> getVariableActions = new ArrayList<GetVariableAction>();
     private int                           position           = 0;
@@ -58,11 +55,6 @@ public class Parser
     private Parser(final List<Token> tokens)
     {
         this.tokens = tokens;
-    }
-
-    static void reset()
-    {
-        COUNTER.set(0);
     }
 
     public static List<Action> parse(final Tokenizer tokenizer) throws TokenizerException, AssemblerException
@@ -122,7 +114,7 @@ public class Parser
         final FileLocation ds = this.getFileLocation();
         final boolean isRep = mc == MetaCommand.REPB || mc == MetaCommand.REPW;
         final boolean isWord = mc == MetaCommand.DW || mc == MetaCommand.REPW;
-        long cid = 0;
+        int cid = 0;
         JumpIdAction start = null, end = null;
 
         if (isRep)
@@ -133,7 +125,7 @@ public class Parser
                 throw new AssemblerException(this.getFileLocation(), "',' expected");
             }
             this.consume();
-            cid = COUNTER.incrementAndGet();
+            cid = CounterState.get().newId();
             actions.add(new CounterSetAction(ds, cid));
             start = new JumpIdAction(ds);
             end = new JumpIdAction(ds);

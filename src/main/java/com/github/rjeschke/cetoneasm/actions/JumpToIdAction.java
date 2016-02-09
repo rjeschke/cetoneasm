@@ -23,9 +23,9 @@ import com.github.rjeschke.cetoneasm.FileLocation;
 
 public class JumpToIdAction extends Action
 {
-    private final long jumpId;
+    private final int jumpId;
 
-    public JumpToIdAction(final FileLocation location, final long jumpId)
+    public JumpToIdAction(final FileLocation location, final int jumpId)
     {
         super(location);
         this.jumpId = jumpId;

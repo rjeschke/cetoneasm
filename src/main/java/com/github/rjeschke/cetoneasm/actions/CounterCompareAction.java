@@ -23,10 +23,10 @@ import com.github.rjeschke.cetoneasm.FileLocation;
 
 public class CounterCompareAction extends Action
 {
-    private final long id;
-    private final long jumpId;
+    private final int id;
+    private final int jumpId;
 
-    public CounterCompareAction(final FileLocation location, final long id, final long jumpId)
+    public CounterCompareAction(final FileLocation location, final int id, final int jumpId)
     {
         super(location);
         this.id = id;

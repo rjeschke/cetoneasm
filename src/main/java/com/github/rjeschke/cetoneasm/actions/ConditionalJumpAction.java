@@ -23,9 +23,9 @@ import com.github.rjeschke.cetoneasm.FileLocation;
 
 public class ConditionalJumpAction extends Action
 {
-    private final long jumpId;
+    private final int jumpId;
 
-    public ConditionalJumpAction(final FileLocation location, final long jumpId)
+    public ConditionalJumpAction(final FileLocation location, final int jumpId)
     {
         super(location);
         this.jumpId = jumpId;

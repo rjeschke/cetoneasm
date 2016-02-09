@@ -23,6 +23,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import com.github.rjeschke.cetoneasm.actions.CallMacroAction;
+import com.github.rjeschke.cetoneasm.actions.CounterSetAction;
 import com.github.rjeschke.cetoneasm.actions.DefineMacroAction;
 import com.github.rjeschke.cetoneasm.actions.JumpIdAction;
 import com.github.rjeschke.cetoneasm.actions.JumpToIdAction;
@@ -37,16 +38,15 @@ public class Assembler
     private final static int                         FINAL_PASS         = 5;
     private final HashMap<String, Variable>          variables          = new HashMap<String, Variable>();
     private final HashMap<String, Variable>          labels             = new HashMap<String, Variable>();
-    private final HashMap<Long, Integer>             jumpLabelToIndex   = new HashMap<Long, Integer>();
-    private final HashMap<String, Long>              metaJumpMap        = new HashMap<String, Long>();
     private final HashMap<String, DefineMacroAction> definedMacros      = new HashMap<String, DefineMacroAction>();
-    private final HashMap<Long, Long>                counterMap         = new HashMap<Long, Long>();
+    private int[]                                    jumpTable;
+    private int[]                                    counters;
     private final long[]                             arithStack         = new long[1024];
     private int                                      arithSp;
     private Variable                                 pcVariable         = null;
     private final ArrayList<CodeContainer>           codeContainers     = new ArrayList<CodeContainer>();
     private int                                      passNumber         = 0;
-    private long                                     jumpId             = -1;
+    private int                                      jumpId             = -1;
     private boolean                                  throwIfUnitialized = false;
     private String                                   parentLabel        = null;
 
@@ -67,8 +67,8 @@ public class Assembler
     {
         this.variables.clear();
         this.labels.clear();
-        this.jumpLabelToIndex.clear();
-        this.metaJumpMap.clear();
+        this.jumpTable = null;
+        this.counters = null;
         this.codeContainers.clear();
         this.definedMacros.clear();
         this.variables.put("@", this.pcVariable = new Variable());
@@ -124,7 +124,7 @@ public class Assembler
         return this.passNumber;
     }
 
-    public void setJump(final long id)
+    public void setJump(final int id)
     {
         this.jumpId = id;
     }
@@ -165,15 +165,14 @@ public class Assembler
         this.emmitDataByte((value >> 8) & 255);
     }
 
-    public void setCounter(final long id, final long value)
+    public void setCounter(final int id, final int value)
     {
-        this.counterMap.put(id, value);
+        this.counters[id] = value;
     }
 
-    public long getCounter(final long id)
+    public int getCounter(final int id)
     {
-        final Long value = this.counterMap.get(id);
-        return value != null ? value.longValue() : 0;
+        return this.counters[id];
     }
 
     private void incPC() throws AssemblerException
@@ -361,6 +360,7 @@ public class Assembler
             this.startPass(2);
 
             // Transfrom MetaLabelAction to JumpIdAction
+            final HashMap<String, Integer> metaJumps = new HashMap<String, Integer>();
             for (int i = 0; i < actions.size(); i++)
             {
                 final Action action = currentAction = actions.get(i);
@@ -368,17 +368,34 @@ public class Assembler
                 {
                     final String name = ((MetaLabelAction)action).getName();
                     final JumpIdAction jump = new JumpIdAction(action.getLocation());
-                    this.metaJumpMap.put(name, jump.getID());
+                    metaJumps.put(name, jump.getID());
                     actions.set(i, jump);
                 }
             }
-            // Populate jumpLabelToIndex
+            // Find maximum jump/counter IDs
+            int maxJumpId = 0;
+            int maxCounterId = 0;
             for (int i = 0; i < actions.size(); i++)
             {
                 final Action action = currentAction = actions.get(i);
                 if (action instanceof JumpIdAction)
                 {
-                    this.jumpLabelToIndex.put(((JumpIdAction)action).getID(), i);
+                    maxJumpId = Math.max(maxJumpId, ((JumpIdAction)action).getID());
+                }
+                else if (action instanceof CounterSetAction)
+                {
+                    maxCounterId = Math.max(maxCounterId, ((CounterSetAction)action).getID());
+                }
+            }
+            this.jumpTable = new int[maxJumpId + 1];
+            this.counters = new int[maxCounterId + 1];
+            // Populate jumpTable
+            for (int i = 0; i < actions.size(); i++)
+            {
+                final Action action = currentAction = actions.get(i);
+                if (action instanceof JumpIdAction)
+                {
+                    this.jumpTable[((JumpIdAction)action).getID()] = i;
                     actions.remove(i--);
                 }
             }
@@ -389,11 +406,11 @@ public class Assembler
                 if (action instanceof MetaGotoAction)
                 {
                     final String name = ((MetaGotoAction)action).getName();
-                    if (!this.metaJumpMap.containsKey(name))
+                    if (!metaJumps.containsKey(name))
                     {
                         throw new AssemblerException(action.getLocation(), "Unknown .LABEL '" + name + "'");
                     }
-                    actions.set(i, new JumpToIdAction(action.getLocation(), this.metaJumpMap.get(name).longValue()));
+                    actions.set(i, new JumpToIdAction(action.getLocation(), metaJumps.get(name).intValue()));
                 }
             }
             // Gather all declared variables and labels
@@ -454,9 +471,7 @@ public class Assembler
                 }
             }
             Con.info("  %d variable(s), %d label(s), %d .LABEL(s)", this.variables.size() - 1, this.labels.size(),
-                    this.metaJumpMap.size());
-
-            Con.info(actions.toString());
+                    metaJumps.size());
 
             // ////////////////////////////////////////////////////////////////
             // Pass 4-6: Compile
@@ -523,7 +538,7 @@ public class Assembler
                 final int temp;
                 if (this.assembler.jumpId >= 0)
                 {
-                    temp = this.assembler.jumpLabelToIndex.get(this.assembler.jumpId);
+                    temp = this.assembler.jumpTable[this.assembler.jumpId];
                 }
                 else
                 {
@@ -537,7 +552,7 @@ public class Assembler
             {
                 if (this.assembler.jumpId >= 0)
                 {
-                    this.index = this.assembler.jumpLabelToIndex.get(this.assembler.jumpId);
+                    this.index = this.assembler.jumpTable[this.assembler.jumpId];
                     this.assembler.jumpId = -1;
                 }
                 return this.actions.get(this.index++);

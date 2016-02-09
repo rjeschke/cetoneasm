@@ -16,23 +16,21 @@
 
 package com.github.rjeschke.cetoneasm.actions;
 
-import java.util.concurrent.atomic.AtomicLong;
-
+import com.github.rjeschke.cetoneasm.CounterState;
 import com.github.rjeschke.cetoneasm.FileLocation;
 import com.github.rjeschke.cetoneasm.MetaAction;
 
 public class JumpIdAction extends MetaAction
 {
-    private final static AtomicLong JUMP_COUNTER = new AtomicLong(0);
-    private final long              id;
+    private final int id;
 
     public JumpIdAction(final FileLocation location)
     {
         super(location);
-        this.id = JUMP_COUNTER.incrementAndGet();
+        this.id = CounterState.get().newJumpId();
     }
 
-    public long getID()
+    public int getID()
     {
         return this.id;
     }
