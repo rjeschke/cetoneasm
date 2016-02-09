@@ -34,6 +34,7 @@ import com.github.rjeschke.neetutils.collections.Colls;
 
 public class Assembler
 {
+    private final static int                         FINAL_PASS         = 5;
     private final HashMap<String, Variable>          variables          = new HashMap<String, Variable>();
     private final HashMap<String, Variable>          labels             = new HashMap<String, Variable>();
     private final HashMap<Long, Integer>             jumpLabelToIndex   = new HashMap<Long, Integer>();
@@ -87,7 +88,7 @@ public class Assembler
         {
         case 0: // .INCLUDE
             break;
-        case 1: // .CALL
+        case 1: // .MACRO, .CALL
             break;
         case 2: // Gather variables/labels
             break;
@@ -105,6 +106,11 @@ public class Assembler
             this.throwIfUnitialized = true;
             break;
         }
+    }
+
+    public boolean isFinalPass()
+    {
+        return this.passNumber == FINAL_PASS;
     }
 
     private CodeContainer getCurrentCodeContainer()
@@ -318,7 +324,7 @@ public class Assembler
                     actions.remove(i--);
                 }
             }
-            Con.info("  Found %d macro definition(s)", this.definedMacros.size());
+            Con.info("  %d macro definition(s)", this.definedMacros.size());
             long id = 0;
             for (int i = 0; i < actions.size(); i++)
             {
@@ -435,7 +441,8 @@ public class Assembler
                     this.labels.put(labelName, new Variable());
                 }
             }
-
+            Con.info("  %d variable(s), %d label(s), %d .LABEL(s)", this.variables.size() - 1, this.labels.size(),
+                    this.metaJumpMap.size());
             // ////////////////////////////////////////////////////////////////
             // Pass 4-6: Compile
             final ActionIterable iterable = new ActionIterable(actions, this);
@@ -524,7 +531,7 @@ public class Assembler
             @Override
             public void remove()
             {
-                //
+                throw new IllegalStateException("ActionIterator does not support remove()");
             }
         }
     }

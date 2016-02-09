@@ -26,7 +26,7 @@ Identifier:
 Identifiers must start with a letter or `_` and are allowed to contain `_`, 
 letters and digits. Identifiers starting with `_` are local to the last
 defined label, more on that later. The program counter can be read/modified
-using the variable name `@`. 
+using the variable name `@`. Identifiers are case insensitive.
 
 `LOOP: STA $D020` - Label
 `_LOOP1: NOP` - local label
@@ -37,20 +37,24 @@ using the variable name `@`.
 Expressions:
 --
 **Unary operators:**
-`!` - logical not (i.e. 0 -> 1, !=0 -> 0)
-`~` - binary not (`^ -1`)
-`-` - negation
-`<` - low byte
-`>` - high byte
 
-**Binary operators:** 
-`+`, `-`, `*`. `/` - basic arithmetic
-`<<`, `>>` - (arithmetic) left/right shift
-`&`, `|`, `^` - binary and/or/xor
-`==`. `!=`. `<`. `<=`. `>`. `>=` - comparison  
+* `!` - logical not (i.e. 0 -> 1, !=0 -> 0)
+* `~` - binary not (`^ -1`)
+* `-` - negation
+* `<` - low byte
+* `>` - high byte
+
+**Binary operators:**
+ 
+* `+`, `-`, `*`. `/` - basic arithmetic
+* `<<`, `>>` - (arithmetic) left/right shift
+* `&`, `|`, `^` - binary and/or/xor
+* `==`. `!=`. `<`. `<=`. `>`. `>=` - comparison  
 
 **Operator precedence:**
+
 *(Given from highest to lowest)*
+
 1. Unary (`!`, `~`, `-`, `<`, `>`)
 2. `*`, `/`
 3. `+`, `-`
@@ -72,7 +76,8 @@ operands so that the expression does not start with a `(` or prepend something
 Opcode format:
 --
 `cetoneasm` does not support explicitly specifying `A` for opcodes that operate
-on the accumulator, e.g. `ASL A`, instead just write `ASL`.
+on the accumulator, e.g. `ASL A`, instead just write `ASL`. Opcode names are
+case insensitive.
 Otherwise `cetoneasm` uses the following table (by Graham/Oxyron) for opcode naming 
 and addressing modes: http://www.oxyron.de/html/opcodes02.html
 

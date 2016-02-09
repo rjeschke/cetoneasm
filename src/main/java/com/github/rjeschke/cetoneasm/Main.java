@@ -121,13 +121,13 @@ public class Main
                         codeSize += cc.getSize();
                     }
                 }
-                Con.info("Generating disassembly");
-                final StringBuilder disasm = new StringBuilder();
-                for (final CodeContainer cc : containers)
-                {
-                    disasm.append(cc.toString());
-                }
-                Con.info(disasm.toString());
+//                Con.info("Generating disassembly");
+//                final StringBuilder disasm = new StringBuilder();
+//                for (final CodeContainer cc : containers)
+//                {
+//                    disasm.append(cc.toString());
+//                }
+//                Con.info(disasm.toString());
                 Con.info("Linking");
                 final byte[] prg = Linker.link(config, containers);
                 Con.info(" Code size: $%1$04x(%1$d) bytes", codeSize);
