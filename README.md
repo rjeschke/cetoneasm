@@ -5,20 +5,20 @@ Number literals:
 --
 `cetoneasm` uses a `long` number type (i.e. int64_t) as the basic number type.
 
-`123` - decimal
-`$12` - hexadecimal
-`0x12` - hexadecimal
-`0o12` - octal
-`0b1101` - binary
+* `123` - decimal
+* `$12` - hexadecimal
+* `0x12` - hexadecimal
+* `0o12` - octal
+* `0b1101` - binary
 
 
 String literals:
 --
 Strings literals are only support as arguments to (some) meta commands.
 
-`"ASCII STRING"` - ASCII
-`a"ASCII STRING"` - ASCII
-`s"SCREEN CODE STRING"` - Screen codes (`& $3F`)
+* `"ASCII STRING"` - ASCII
+* `a"ASCII STRING"` - ASCII
+* `s"SCREEN CODE STRING"` - Screen codes (`& $3F`)
 
 
 Identifier:
@@ -28,10 +28,10 @@ letters and digits. Identifiers starting with `_` are local to the last
 defined label, more on that later. The program counter can be read/modified
 using the variable name `@`. Identifiers are case insensitive.
 
-`LOOP: STA $D020` - Label
-`_LOOP1: NOP` - local label
-`HUND = 42` - variable   
-`_HUND = 42` - local variable
+* `LOOP: STA $D020` - Label
+* `_LOOP1: NOP` - local label
+* `HUND = 42` - variable   
+* `_HUND = 42` - local variable
 
 
 Expressions:
@@ -88,4 +88,3 @@ Meta commands:
 * `.DB`, `.DW` *expr*[,*expr*,*expr*,...] - store (B)ytes or (W)words
 * `.REPB`, `.REPW`  *expr*,*expr*[,*expr*,*expr*,...] - write repeated (B)ytes
   or (W)words. First expression is the amount, following expressions are data
- 
