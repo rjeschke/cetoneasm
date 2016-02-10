@@ -48,12 +48,6 @@ public class AssembleOpcodeAction extends Action
         this.widthType = widthtype;
     }
 
-    // public AssembleOpcodeAction(final FileLocation location, final String
-    // opcode)
-    // {
-    // this(location, opcode, null, null);
-    // }
-    //
     public AssembleOpcodeAction(final FileLocation location, final String opcode, final WidthType widthtype)
     {
         this(location, opcode, null, widthtype);
@@ -67,7 +61,8 @@ public class AssembleOpcodeAction extends Action
     @Override
     public void run(final Assembler assembler) throws AssemblerException
     {
-        final int address = this.opcode != null && this.opcode.adressingMode != AddressingMode.IMPLIED
+        final int address = (this.opcode != null && this.opcode.adressingMode != AddressingMode.IMPLIED)
+                | this.widthType != null
                 ? (int)assembler.pop() & 0xffff : 0;
         if (this.opcode != null)
         {

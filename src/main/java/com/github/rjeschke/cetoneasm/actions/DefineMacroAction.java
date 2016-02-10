@@ -27,19 +27,17 @@ import com.github.rjeschke.cetoneasm.MetaAction;
 
 public class DefineMacroAction extends MetaAction
 {
-    private final String                  name;
-    private final List<String>            arguments;
-    private final List<Action>            actions;
-    private final List<GetVariableAction> getVariableActions;
+    private final String       name;
+    private final List<String> arguments;
+    private final List<Action> actions;
 
     public DefineMacroAction(final FileLocation location, final String name, final List<String> arguments,
-            final List<Action> actions, final List<GetVariableAction> getVariableActions)
+            final List<Action> actions)
     {
         super(location);
         this.name = name;
         this.arguments = arguments;
         this.actions = actions;
-        this.getVariableActions = new ArrayList<GetVariableAction>(getVariableActions);
 
         this.prepare();
     }
@@ -59,14 +57,6 @@ public class DefineMacroAction extends MetaAction
             }
         }
 
-        for (final GetVariableAction gva : this.getVariableActions)
-        {
-            if (def.contains(gva.getVariableName()))
-            {
-                gva.makeLocal();
-            }
-        }
-
         for (final Action a : this.actions)
         {
             if (a instanceof SetVariableAction)
@@ -83,6 +73,14 @@ public class DefineMacroAction extends MetaAction
                 if (def.contains(sla.getLabelName()))
                 {
                     sla.makeLocal();
+                }
+            }
+            else if (a instanceof GetVariableAction)
+            {
+                final GetVariableAction gva = (GetVariableAction)a;
+                if (def.contains(gva.getVariableName()))
+                {
+                    gva.makeLocal();
                 }
             }
         }

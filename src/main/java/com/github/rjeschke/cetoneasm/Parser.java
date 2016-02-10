@@ -46,7 +46,6 @@ import com.github.rjeschke.cetoneasm.actions.WriteStringAction;
 public class Parser
 {
     private final List<Token>             tokens;
-    private final List<GetVariableAction> getVariableActions = new ArrayList<GetVariableAction>();
     private int                           position           = 0;
     private final Assembler               evalRuntime        = new Assembler();
     private boolean                       topLevel           = true;
@@ -241,7 +240,7 @@ public class Parser
             throw new AssemblerException(this.getFileLocation(), "ENDMACRO expected");
         }
         this.consume();
-        actions.add(new DefineMacroAction(def, macroName, variableNames, expression, this.getVariableActions));
+        actions.add(new DefineMacroAction(def, macroName, variableNames, expression));
     }
 
     private void parseCallMacro(final List<Action> actions) throws AssemblerException
@@ -433,10 +432,6 @@ public class Parser
             {
                 final GetVariableAction gva = new GetVariableAction(this.getFileLocation(), this.getStringValue());
                 lActions.add(gva);
-                if (!this.topLevel)
-                {
-                    this.getVariableActions.add(gva);
-                }
                 this.consume();
                 break;
             }
@@ -772,10 +767,6 @@ public class Parser
         final boolean wasMacroDefinition = this.inMacroDefinition;
         if (endMetaMarker.length > 0)
         {
-            if (!wasTopLevel)
-            {
-                this.getVariableActions.clear();
-            }
             this.inMacroDefinition = endMetaMarker.length == 1 && endMetaMarker[0].equals("ENDMACRO");
             this.topLevel = false;
         }

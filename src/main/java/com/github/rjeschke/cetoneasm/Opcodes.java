@@ -87,7 +87,8 @@ public class Opcodes
                     continue;
                 }
                 final String[] ts = line.trim().split(" ");
-                final int opcode = Integer.parseInt(ts[0], 16);
+                final boolean doNotAdd = ts[0].startsWith("*");
+                final int opcode = Integer.parseInt(doNotAdd ? ts[0].substring(1) : ts[0], 16);
                 final String mn = ts[1].toUpperCase();
                 final AddressingMode mode = ts.length == 2 ? AddressingMode.IMPLIED : modeMap.get(ts[2].toLowerCase());
                 if (mode == null || mode == AddressingMode.ILL)
@@ -99,11 +100,14 @@ public class Opcodes
                     throw new IOException("Duplicate opcode definition for $" + Integer.toString(opcode, 16));
                 }
                 BY_CODE[opcode] = new Opcode(mn, opcode, mode);
-                if (!BY_NAME.containsKey(mn))
+                if (!doNotAdd)
                 {
-                    BY_NAME.put(mn, new ArrayList<Opcode>());
+                    if (!BY_NAME.containsKey(mn))
+                    {
+                        BY_NAME.put(mn, new ArrayList<Opcode>());
+                    }
+                    BY_NAME.get(mn).add(BY_CODE[opcode]);
                 }
-                BY_NAME.get(mn).add(BY_CODE[opcode]);
             }
             for (int i = 0; i < BY_CODE.length; i++)
             {
@@ -123,6 +127,10 @@ public class Opcodes
                 }
                 for (final Opcode op : e.getValue())
                 {
+                    if (map.containsKey(op.adressingMode))
+                    {
+                        throw new IllegalStateException("Duplicate opcode: " + op);
+                    }
                     map.put(op.adressingMode, op);
                 }
             }
