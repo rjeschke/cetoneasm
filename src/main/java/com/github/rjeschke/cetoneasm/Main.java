@@ -72,7 +72,6 @@ public class Main
         if (ae.getCause() == null)
         {
             Con.error(ae.getLocation() + ": " + ae.getMessage());
-            Con.error(getStackTrace(ae));
         }
         else
         {

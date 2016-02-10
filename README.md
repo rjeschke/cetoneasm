@@ -112,9 +112,9 @@ Meta commands:
 * `.GOTO` *identifier*
 * `.INCLUDE` *name-ascii-str*
 * `.BINCLUDE` *name-ascii-str*[, *skip-bytes-number*, *length-number*]
-* `.INFO` *exprs/strings*
-* `.WARN` *exprs/strings*
-* `.ERROR` *exprs/strings*
+* `.INFO` *string*
+* `.WARN` *string*
+* `.ERROR` *string*
 
 Common pitfalls and quirks:
 ---
