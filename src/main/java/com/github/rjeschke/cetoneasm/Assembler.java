@@ -362,8 +362,6 @@ public class Assembler
                 }
             }
 
-            Con.info(actions.toString());
-
             // ////////////////////////////////////////////////////////////////
             // Pass 3: Gather variables/labels
             this.startPass(2);

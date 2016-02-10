@@ -6,12 +6,11 @@ TODO:
 
 * `.INCLUDE`
 * `.BINCLUDE`
-* `.WHILE`/`.ENDWHILE`
-* `.REP`/`.ENDREP`
+* `.INFO`, `.WARN`, `.ERROR`
 * command line arguments
 * configuration file
 * server mode
-* endless loop detection
+* endless loop detection (detection implemented, now handle it)
 * `.CONST` ?
 
 Number literals:
@@ -112,7 +111,7 @@ Meta commands:
 * `.LABEL` *identifier*
 * `.GOTO` *identifier*
 * `.INCLUDE` *name-ascii-str*
-* `.BINCLUDE` *name-ascii-str*[, *skip-expr*, *length-expr*]
+* `.BINCLUDE` *name-ascii-str*[, *skip-bytes-number*, *length-number*]
 * `.INFO` *exprs/strings*
 * `.WARN` *exprs/strings*
 * `.ERROR` *exprs/strings*
@@ -134,11 +133,13 @@ Common pitfalls and quirks:
 * `.GOTO` can be used safely to exit any kind of control flow block (even `.REP`) 
 * having labels and variables of the same name is forbidden *(makes sense somehow^^)* 
 * `.LABEL` does not get mangled in `.MACRO` so I recommend *not* to use it inside
-  of macros *(didn't find the need for this yet)*
+  of macros
 * it is possible to read/modify local macro variables after macro expansion, as those
   do not contain unusable identifier characters and therefore leak
 * there is no need to use local variables or labels inside of `.MACRO` as everything
   is mangled into locals anyway
+* `.MACRO` names have their own namespace and can therefore be identical to already
+  defines variable or label names
 
 Internals:
 --
