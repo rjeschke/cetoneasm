@@ -133,7 +133,7 @@ public class Assembler
 
     public String resolveFilename(final String originalFilename)
     {
-        final String filename = U.addFileExtension(originalFilename);
+        final String filename = U.addCasmFileExtension(originalFilename);
         File f = new File(filename);
         if (f.exists())
         {

@@ -56,12 +56,31 @@ public final class U
         return Strings.join(comps, isWindows() ? "\\" : "/");
     }
 
-    public static String addFileExtension(final String path)
+    public static String addCasmFileExtension(final String path)
     {
         if (!path.contains("."))
         {
             return path + CASM_EXT;
         }
         return path;
+    }
+
+    public static String addPrgFileExtension(final String path)
+    {
+        if (!path.contains("."))
+        {
+            return path + ".prg";
+        }
+        return path;
+    }
+
+    public static String replaceExtension(final String filename, final String with)
+    {
+        final int idx = filename.lastIndexOf('.');
+        if (idx < 0)
+        {
+            return filename + with;
+        }
+        return filename.substring(0, idx) + with;
     }
 }

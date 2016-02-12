@@ -16,7 +16,19 @@
 
 package com.github.rjeschke.cetoneasm;
 
+import com.github.rjeschke.neetutils.cmd.CmdArgument;
+
 public class Config
 {
-    public String fileEncoding = "UTF-8";
+    @CmdArgument(l = "help", s = 'h', isSwitch = true, desc = "Prints a summary of command line arguments.")
+    public boolean printHelp         = false;
+
+    @CmdArgument(l = "file-encoding", printDefault = true, desc = "Sets the file encoding for source files.")
+    public String  fileEncoding      = "UTF-8";
+
+    @CmdArgument(s = 'o', l = "output", printDefault = false, desc = "Specifies the output file name.")
+    public String  outputFile        = "";
+
+    @CmdArgument(s = 'd', l = "disassembly", isSwitch = true, printDefault = false, desc = "Generates a disassembly listing after assembly.")
+    public boolean createDisassembly = false;
 }

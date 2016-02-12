@@ -16,10 +16,18 @@
 
 package com.github.rjeschke.cetoneasm;
 
+import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.util.List;
+
+import com.github.rjeschke.neetutils.cmd.CmdLineParser;
+import com.github.rjeschke.neetutils.collections.Colls;
 
 public class Main
 {
@@ -86,25 +94,137 @@ public class Main
         System.exit(2);
     }
 
+    private static void writeString(final String filename, final String str)
+    {
+        try
+        {
+            final BufferedWriter w = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(filename), "UTF-8"));
+            try
+            {
+                w.write(str);
+            }
+            finally
+            {
+                w.close();
+            }
+        }
+        catch (final IOException e)
+        {
+            Con.error("Could not write to file '%s'", filename);
+            Con.error(getStackTrace(e));
+            System.exit(10);
+        }
+    }
+
+    private static void writeBinary(final String filename, final byte[] bytes)
+    {
+        try
+        {
+            final FileOutputStream out = new FileOutputStream(filename);
+            try
+            {
+                out.write(bytes);
+            }
+            finally
+            {
+                out.close();
+            }
+        }
+        catch (final IOException e)
+        {
+            Con.error("Could not write to file '%s'", filename);
+            Con.error(getStackTrace(e));
+            System.exit(11);
+        }
+    }
+
+    public static void printHelp()
+    {
+        try
+        {
+            Con.info("Usage: casm [options] file...");
+            Con.info(CmdLineParser.generateHelp(80, true, new Config()));
+        }
+        catch (final IOException e)
+        {
+            Con.error("Cmdline error: " + e.getMessage() + "\n");
+            System.exit(5);
+        }
+    }
+
     public static void main(final String[] args) throws TokenizerException
     {
-        final String inputFile = U.normalizePath(U.addFileExtension("/home/rjeschke/Dropbox/testing"));
-
         Con.initialize();
         Con.info("cetoneasm v1.0, (c) 2016 René 'Neotec/Cetone' Jeschke");
         Con.info("-----------------------------------------------------");
-        CounterState.get().reset();
+
         final Config config = new Config();
-        final Assembler rt = new Assembler(config);
-        final Tokenizer tok = new Tokenizer(config, inputFile);
+        List<String> rest = null;
         try
         {
-            tok.open();
-            Con.info("Assembling '" + inputFile + "'");
-            Con.info("---");
-            rt.addIncludeFromFilename(inputFile);
-            Con.info("Parsing");
-            final List<Action> actions = Parser.parse(tok);
+            rest = CmdLineParser.parse(args, config);
+        }
+        catch (final IOException e)
+        {
+            Con.error(e.getMessage() + "\n");
+            printHelp();
+            System.exit(5);
+        }
+
+        if (config.printHelp)
+        {
+            printHelp();
+            System.exit(0);
+        }
+
+        if (rest == null || rest.isEmpty())
+        {
+            Con.error("Missing input file(s)\n");
+            printHelp();
+            System.exit(6);
+        }
+
+        if (config.outputFile.isEmpty())
+        {
+            config.outputFile = new File("a.prg").getAbsolutePath();
+        }
+        else
+        {
+            config.outputFile = U.addPrgFileExtension(config.outputFile);
+        }
+
+        CounterState.get().reset();
+        final Assembler rt = new Assembler(config);
+
+        final List<Action> actions = Colls.list();
+
+        for (final String file : rest)
+        {
+            final String inputFile = U.normalizePath(U.addCasmFileExtension(new File(file).getAbsolutePath()));
+            final Tokenizer tok = new Tokenizer(config, inputFile);
+            try
+            {
+                tok.open();
+                rt.addIncludeFromFilename(inputFile);
+                Con.info("Parsing '%s'...", inputFile);
+                actions.addAll(Parser.parse(tok));
+            }
+            catch (final TokenizerException te)
+            {
+                reportTokenizerError(te);
+            }
+            catch (final AssemblerException ae)
+            {
+                reportAssemblerError(ae);
+            }
+            finally
+            {
+                tok.close();
+            }
+        }
+
+        try
+        {
             Con.info("Generating code");
             final List<CodeContainer> containers = rt.assemble(config, actions);
             if (containers.isEmpty())
@@ -126,15 +246,19 @@ public class Main
                         codeSize += cc.getSize();
                     }
                 }
-                Con.info("Generating disassembly");
-                final StringBuilder disasm = new StringBuilder();
-                for (final CodeContainer cc : containers)
+                if (config.createDisassembly)
                 {
-                    disasm.append(cc.toString());
+                    Con.info("Generating disassembly");
+                    final StringBuilder disasm = new StringBuilder();
+                    for (final CodeContainer cc : containers)
+                    {
+                        disasm.append(cc.toString());
+                    }
+                    writeString(U.replaceExtension(config.outputFile, ".disasm"), disasm.toString());
                 }
-                Con.info(disasm.toString());
                 Con.info("Linking");
                 final byte[] prg = Linker.link(config, containers);
+                writeBinary(config.outputFile, prg);
                 Con.info(" Code size: $%1$04x(%1$d) bytes", codeSize);
                 Con.info(" Data size: $%1$04x(%1$d) bytes", dataSize);
                 Con.info(" Padding:   $%1$04x(%1$d) bytes", prg.length - 2 - codeSize - dataSize);
@@ -143,10 +267,6 @@ public class Main
                 Con.info(" PRG size:  $%1$04x(%1$d) bytes, %2$d blocks", prg.length, (prg.length + 253) / 254);
             }
         }
-        catch (final TokenizerException te)
-        {
-            reportTokenizerError(te);
-        }
         catch (final AssemblerException ae)
         {
             reportAssemblerError(ae);
@@ -154,10 +274,6 @@ public class Main
         catch (final LinkerException le)
         {
             reportLinkerError(le);
-        }
-        finally
-        {
-            tok.close();
         }
         Con.info("READY.");
         System.exit(0);
