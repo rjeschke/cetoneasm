@@ -278,7 +278,7 @@ public class Main
 
                 if (config.emulate)
                 {
-                    Con.info("Starting emulation");
+                    Con.info("Starting emulation (abort with RETURN)");
                     final Machine machine = new Machine();
                     machine.reset();
                     final int loadAddress = machine.loadPrg(prg);

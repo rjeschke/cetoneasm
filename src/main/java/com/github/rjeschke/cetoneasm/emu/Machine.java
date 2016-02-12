@@ -115,11 +115,11 @@ public class Machine
                 line.append(String.format("%8d: %04X %s ", this.cycle, this.cpu.getPC(), this.cpu.getStatusLine()));
                 line.append(U.disassemble(this.ram, this.cpu.getPC()));
             }
-            this.cpu.clock();
-            if (this.cpu.getPC() == 0)
+            if (this.cpu.getCycle() == 0 && this.cpu.getPC() == 0)
             {
                 break;
             }
+            this.cpu.clock();
             if (wasEnterPressed())
             {
                 Con.warn(" Interrupted");

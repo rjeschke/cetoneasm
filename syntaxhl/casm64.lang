@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<language id="casm64" _name="CetoneAsm-6502" version="2.0" _section="Source">
+
+    <styles>
+        <style id="comment" _name="Comment" map-to="def:comment"/>
+        <style id="string" _name="String" map-to="def:string"/>
+        <style id="escaped-character" _name="Escaped Character" map-to="def:special-char"/>
+        <style id="preprocessor" _name="Preprocessor" map-to="def:preprocessor"/>
+        <style id="keyword" _name="Keyword" map-to="def:keyword"/>
+        <style id="decimal" _name="Decimal number" map-to="def:decimal"/>
+        <style id="basen" _name="Base-N number" map-to="def:base-n-integer"/>
+        <style id="variable" _name="Identifier" map-to="def:identifier"/>
+    </styles>
+
+    <definitions>
+        <context id="casm64">
+            <include>
+                <context id="comment" style-ref="comment">
+                    <start>;</start>
+                    <end>$</end>
+                </context>
+
+                <context id="string" end-at-line-end="true" style-ref="string">
+                    <start>(s"|a"|")</start>
+                    <end>"</end>
+                    <include>
+                        <context id="escape" style-ref="escaped-character">
+                            <match>\\.</match>
+                        </context>
+                    </include>
+                </context>
+
+                <context id="hex1" style-ref="basen">
+                    <match>\$[0-9a-fA-F]+</match>
+                </context>
+
+                <context id="hex2" style-ref="basen">
+                    <match>0(xX)[0-9a-fA-F]+</match>
+                </context>
+
+                <context id="oct" style-ref="basen">
+                    <match>0(oO)[0-7]+</match>
+                </context>
+
+                <context id="bin" style-ref="basen">
+                    <match>0(bB)[0-1]+</match>
+                </context>
+
+                <context id="decimal" style-ref="decimal">
+                    <match>[0-9]+</match>
+                </context>
+
+                <context id="preprocessor" style-ref="preprocessor">
+                    <match>\.[a-zA-Z]+</match>
+                </context>
+
+                <context id="keywords" style-ref="keyword">
+                    <prefix>(?i)\b</prefix>
+                    <keyword>ADC</keyword>
+                    <keyword>AHX</keyword>
+                    <keyword>ALR</keyword>
+                    <keyword>ANC</keyword>
+                    <keyword>AND</keyword>
+                    <keyword>ARR</keyword>
+                    <keyword>ASL</keyword>
+                    <keyword>AXS</keyword>
+                    <keyword>BCC</keyword>
+                    <keyword>BCS</keyword>
+                    <keyword>BEQ</keyword>
+                    <keyword>BIT</keyword>
+                    <keyword>BMI</keyword>
+                    <keyword>BNE</keyword>
+                    <keyword>BPL</keyword>
+                    <keyword>BRK</keyword>
+                    <keyword>BVC</keyword>
+                    <keyword>BVS</keyword>
+                    <keyword>CLC</keyword>
+                    <keyword>CLD</keyword>
+                    <keyword>CLI</keyword>
+                    <keyword>CLV</keyword>
+                    <keyword>CMP</keyword>
+                    <keyword>CPX</keyword>
+                    <keyword>CPY</keyword>
+                    <keyword>DCP</keyword>
+                    <keyword>DEC</keyword>
+                    <keyword>DEX</keyword>
+                    <keyword>DEY</keyword>
+                    <keyword>EOR</keyword>
+                    <keyword>INC</keyword>
+                    <keyword>INX</keyword>
+                    <keyword>INY</keyword>
+                    <keyword>ISC</keyword>
+                    <keyword>JMP</keyword>
+                    <keyword>JSR</keyword>
+                    <keyword>KIL</keyword>
+                    <keyword>LAS</keyword>
+                    <keyword>LAX</keyword>
+                    <keyword>LDA</keyword>
+                    <keyword>LDX</keyword>
+                    <keyword>LDY</keyword>
+                    <keyword>LSR</keyword>
+                    <keyword>NOP</keyword>
+                    <keyword>ORA</keyword>
+                    <keyword>PHA</keyword>
+                    <keyword>PHP</keyword>
+                    <keyword>PLA</keyword>
+                    <keyword>PLP</keyword>
+                    <keyword>RLA</keyword>
+                    <keyword>ROL</keyword>
+                    <keyword>ROR</keyword>
+                    <keyword>RRA</keyword>
+                    <keyword>RTI</keyword>
+                    <keyword>RTS</keyword>
+                    <keyword>SAX</keyword>
+                    <keyword>SBC</keyword>
+                    <keyword>SEC</keyword>
+                    <keyword>SED</keyword>
+                    <keyword>SEI</keyword>
+                    <keyword>SHX</keyword>
+                    <keyword>SHY</keyword>
+                    <keyword>SLO</keyword>
+                    <keyword>SRE</keyword>
+                    <keyword>STA</keyword>
+                    <keyword>STX</keyword>
+                    <keyword>STY</keyword>
+                    <keyword>TAS</keyword>
+                    <keyword>TAX</keyword>
+                    <keyword>TAY</keyword>
+                    <keyword>TSX</keyword>
+                    <keyword>TXA</keyword>
+                    <keyword>TXS</keyword>
+                    <keyword>TYA</keyword>
+                    <keyword>XAA</keyword>        
+                </context>
+
+                <context id="identifier" style-ref="variable">
+                    <match>(@|[_a-zA-Z0-9]+)</match>
+                </context>
+            </include>
+        </context>
+    </definitions>
+</language>
