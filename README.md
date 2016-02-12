@@ -4,10 +4,8 @@ cetoneasm - A C64 (Cross) Macro Assembler
 TODO:
 --
 
-* `.INCLUDE`
 * `.BINCLUDE`
 * `.INFO`, `.WARN`, `.ERROR`
-* command line arguments
 * configuration file
 * server mode
 * endless loop detection (detection implemented, now handle it)
@@ -112,9 +110,9 @@ Meta commands:
 * `.GOTO` *identifier*
 * `.INCLUDE` *name-ascii-str*
 * `.BINCLUDE` *name-ascii-str*[, *skip-bytes-number*, *length-number*]
-* `.INFO` *string*
-* `.WARN` *string*
-* `.ERROR` *string*
+* `.INFO`/`.INFOF` *strings/exprs*
+* `.WARN`/`.WARNF` *strings/exprs*
+* `.ERROR`/`.ERRORF` *strings/exprs*
 
 Common pitfalls and quirks:
 ---
@@ -140,6 +138,9 @@ Common pitfalls and quirks:
   is mangled into locals anyway
 * `.MACRO` names have their own namespace and can therefore be identical to already
   defines variable or label names
+* `.INCLUDE` is evaluated in the very first pass, there's no other evaluation going
+  on. This means that you can not do conditional includes. Includes *always* get
+  included.
 
 Internals:
 --
