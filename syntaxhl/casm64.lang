@@ -20,7 +20,7 @@
                     <end>$</end>
                 </context>
 
-                <context id="string" end-at-line-end="true" style-ref="string">
+                <context id="string" style-ref="string">
                     <start>(s"|a"|")</start>
                     <end>"</end>
                     <include>
