@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <language id="casm64" _name="CetoneAsm-6502" version="2.0" _section="Source">
+    <metadata>
+        <property name="globs">*.casm64</property>
+    </metadata>
 
     <styles>
         <style id="comment" _name="Comment" map-to="def:comment"/>
