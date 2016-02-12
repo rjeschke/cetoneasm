@@ -51,7 +51,32 @@
                 </context>
 
                 <context id="preprocessor" style-ref="preprocessor">
-                    <match>\.[a-zA-Z]+</match>
+                    <prefix>\.(?i)\b</prefix>
+                    <keyword>INCLUDE</keyword>
+                    <keyword>BINCLUDE</keyword>
+                    <keyword>DB</keyword>
+                    <keyword>DW</keyword>
+                    <keyword>REPB</keyword>
+                    <keyword>REPW</keyword>
+                    <keyword>IF</keyword>
+                    <keyword>ELIF</keyword>
+                    <keyword>ELSE</keyword>
+                    <keyword>ENDIF</keyword>
+                    <keyword>REP</keyword>
+                    <keyword>ENDREP</keyword>
+                    <keyword>MACRO</keyword>
+                    <keyword>ENDMACRO</keyword>
+                    <keyword>CALL</keyword>
+                    <keyword>LABEL</keyword>
+                    <keyword>GOTO</keyword>
+                    <keyword>WHILE</keyword>
+                    <keyword>ENDWHILE</keyword>
+                    <keyword>INFO</keyword>
+                    <keyword>WARN</keyword>
+                    <keyword>ERROR</keyword>
+                    <keyword>INFOF</keyword>
+                    <keyword>WARNF</keyword>
+                    <keyword>ERRORF</keyword>
                 </context>
 
                 <context id="keywords" style-ref="keyword">

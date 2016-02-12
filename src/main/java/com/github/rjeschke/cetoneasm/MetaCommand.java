@@ -41,7 +41,10 @@ public enum MetaCommand
     ENDWHILE,
     INFO,
     WARN,
-    ERROR;
+    ERROR,
+    INFOF,
+    WARNF,
+    ERRORF;
 
     private final static HashMap<String, MetaCommand> MAP = new HashMap<String, MetaCommand>();
 

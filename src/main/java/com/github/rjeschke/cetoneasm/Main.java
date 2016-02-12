@@ -199,6 +199,11 @@ public class Main
             config.verboseEmulation = true;
         }
 
+        if (config.verboseEmulation)
+        {
+            config.emulate = true;
+        }
+
         CounterState.get().reset();
         final Assembler rt = new Assembler(config);
 
