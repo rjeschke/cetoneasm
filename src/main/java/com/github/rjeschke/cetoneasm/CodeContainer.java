@@ -112,22 +112,24 @@ public class CodeContainer implements Comparable<CodeContainer>
         }
         else
         {
+            final StringBuilder line = new StringBuilder();
             for (int pc = 0; pc < this.position;)
             {
                 final int opc = this.buffer[pc] & 255;
                 final Opcode op = Opcodes.BY_CODE[opc];
-                sb.append(String.format(" %04X %02X ", pc + this.startAddress, opc));
+                line.setLength(0);
+                line.append(String.format(" %04X %02X ", pc + this.startAddress, opc));
 
                 switch (op.adressingMode)
                 {
                 default:
-                    sb.append("      ");
+                    line.append("      ");
                     break;
                 case ABSOLUTE:
                 case ABSOLUTE_X:
                 case ABSOLUTE_Y:
                 case INDIRECT:
-                    sb.append(String.format("%02X %02X ", this.buffer[pc + 1], this.buffer[pc + 2]));
+                    line.append(String.format("%02X %02X ", this.buffer[pc + 1], this.buffer[pc + 2]));
                     break;
                 case RELATIVE:
                 case IMMEDIATE:
@@ -136,11 +138,11 @@ public class CodeContainer implements Comparable<CodeContainer>
                 case ZEROPAGE_Y:
                 case INDEXED_INDIRECT:
                 case INDIRECT_INDEXED:
-                    sb.append(String.format("%02X    ", this.buffer[pc + 1]));
+                    line.append(String.format("%02X    ", this.buffer[pc + 1]));
                     break;
                 }
 
-                sb.append(op.mnemonic);
+                line.append(op.mnemonic);
 
                 pc++;
 
@@ -149,50 +151,88 @@ public class CodeContainer implements Comparable<CodeContainer>
                 default:
                     break;
                 case ABSOLUTE:
-                    sb.append(String.format(" $%04X", this.readWord(pc)));
+                    line.append(String.format(" $%04X", this.readWord(pc)));
                     pc += 2;
                     break;
                 case ABSOLUTE_X:
-                    sb.append(String.format(" $%04X,X", this.readWord(pc)));
+                    line.append(String.format(" $%04X,X", this.readWord(pc)));
                     pc += 2;
                     break;
                 case ABSOLUTE_Y:
-                    sb.append(String.format(" $%04X,Y", this.readWord(pc)));
+                    line.append(String.format(" $%04X,Y", this.readWord(pc)));
                     pc += 2;
                     break;
                 case INDIRECT:
-                    sb.append(String.format(" ($%04X)", this.readWord(pc)));
+                    line.append(String.format(" ($%04X)", this.readWord(pc)));
                     pc += 2;
                     break;
                 case IMMEDIATE:
-                    sb.append(String.format(" #$%02X", this.buffer[pc] & 255));
+                    line.append(String.format(" #$%02X", this.buffer[pc] & 255));
                     pc++;
                     break;
                 case ZEROPAGE:
-                    sb.append(String.format(" $%02X", this.buffer[pc] & 255));
+                    line.append(String.format(" $%02X", this.buffer[pc] & 255));
                     pc++;
                     break;
                 case ZEROPAGE_X:
-                    sb.append(String.format(" $%02X,X", this.buffer[pc] & 255));
+                    line.append(String.format(" $%02X,X", this.buffer[pc] & 255));
                     pc++;
                     break;
                 case ZEROPAGE_Y:
-                    sb.append(String.format(" $%02X,Y", this.buffer[pc] & 255));
+                    line.append(String.format(" $%02X,Y", this.buffer[pc] & 255));
                     pc++;
                     break;
                 case INDEXED_INDIRECT:
-                    sb.append(String.format(" ($%02X),Y", this.buffer[pc] & 255));
+                    line.append(String.format(" ($%02X),Y", this.buffer[pc] & 255));
                     pc++;
                     break;
                 case INDIRECT_INDEXED:
-                    sb.append(String.format(" ($%02X,X)", this.buffer[pc] & 255));
+                    line.append(String.format(" ($%02X,X)", this.buffer[pc] & 255));
                     pc++;
                     break;
                 case RELATIVE:
-                    sb.append(String.format(" $%04X", this.buffer[pc] + pc + 1 + this.startAddress));
+                    line.append(String.format(" $%04X", this.buffer[pc] + pc + 1 + this.startAddress));
                     pc++;
                     break;
                 }
+
+                // Clock cycle analysis
+
+                while (line.length() < 30)
+                {
+                    line.append(' ');
+                }
+                line.append("; ");
+
+                final int cycles = Opcodes.CYCLE_COUNT[op.value];
+
+                if (cycles < 0)
+                {
+                    if (op.adressingMode == AddressingMode.RELATIVE)
+                    {
+                        final int from = pc + this.startAddress;
+                        final int target = this.buffer[pc - 1] + from;
+                        if ((from & 0xff00) != (target & 0xff00))
+                        {
+                            line.append("2/4");
+                        }
+                        else
+                        {
+                            line.append("2/3");
+                        }
+                    }
+                    else
+                    {
+                        line.append(-cycles);
+                        line.append('*');
+                    }
+                }
+                else
+                {
+                    line.append(cycles);
+                }
+
+                sb.append(line);
                 sb.append('\n');
             }
         }

@@ -26,6 +26,7 @@ import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.util.List;
 
+import com.github.rjeschke.cetoneasm.emu.Machine;
 import com.github.rjeschke.neetutils.cmd.CmdLineParser;
 import com.github.rjeschke.neetutils.collections.Colls;
 
@@ -193,6 +194,11 @@ public class Main
             config.outputFile = U.addPrgFileExtension(config.outputFile);
         }
 
+        if (config.xverboseEmulation)
+        {
+            config.verboseEmulation = true;
+        }
+
         CounterState.get().reset();
         final Assembler rt = new Assembler(config);
 
@@ -253,11 +259,15 @@ public class Main
                     for (final CodeContainer cc : containers)
                     {
                         disasm.append(cc.toString());
+                        disasm.append('\n');
                     }
-                    writeString(U.replaceExtension(config.outputFile, ".disasm"), disasm.toString());
+                    final String disFile = U.replaceExtension(config.outputFile, ".disasm");
+                    Con.info(" Writing to '%s'", disFile);
+                    writeString(disFile, disasm.toString());
                 }
                 Con.info("Linking");
                 final byte[] prg = Linker.link(config, containers);
+                Con.info(" Writing to '%s'", config.outputFile);
                 writeBinary(config.outputFile, prg);
                 Con.info(" Code size: $%1$04x(%1$d) bytes", codeSize);
                 Con.info(" Data size: $%1$04x(%1$d) bytes", dataSize);
@@ -265,6 +275,16 @@ public class Main
                 Con.info(" PRG start: $%04x", containers.get(0).getStartAddress());
                 Con.info(" PRG end:   $%04x", containers.get(containers.size() - 1).getEndAddress() - 1);
                 Con.info(" PRG size:  $%1$04x(%1$d) bytes, %2$d blocks", prg.length, (prg.length + 253) / 254);
+
+                if (config.emulate)
+                {
+                    Con.info("Starting emulation");
+                    final Machine machine = new Machine();
+                    machine.reset();
+                    final int loadAddress = machine.loadPrg(prg);
+                    machine.execute(loadAddress, config.verboseEmulation, config.xverboseEmulation);
+                    Con.info("Finished emulation");
+                }
             }
         }
         catch (final AssemblerException ae)

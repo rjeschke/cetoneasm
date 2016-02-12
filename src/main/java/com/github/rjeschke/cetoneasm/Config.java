@@ -31,4 +31,13 @@ public class Config
 
     @CmdArgument(s = 'd', l = "disassembly", isSwitch = true, printDefault = false, desc = "Generates a disassembly listing after assembly.")
     public boolean createDisassembly = false;
+
+    @CmdArgument(s = 'e', l = "emulate", isSwitch = true, printDefault = false, desc = "Execute the resulting binary in the 6510 emulator.")
+    public boolean emulate           = false;
+
+    @CmdArgument(l = "emulate-verbose", isSwitch = true, printDefault = false, desc = "Prints exhaustive runtime information during emulation.")
+    public boolean verboseEmulation  = false;
+
+    @CmdArgument(l = "emulate-xverbose", isSwitch = true, printDefault = false, desc = "Also prints CPU reads @PC, includes emulate-verbose.")
+    public boolean xverboseEmulation = false;
 }
