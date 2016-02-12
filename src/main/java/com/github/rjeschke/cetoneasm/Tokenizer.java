@@ -55,7 +55,7 @@ public class Tokenizer
         }
     }
 
-    public void open() throws TokenizerException
+    public Tokenizer open() throws TokenizerException
     {
         try
         {
@@ -64,6 +64,19 @@ public class Tokenizer
         catch (final IOException e)
         {
             throw new TokenizerException(this, "Failed to open file '" + this.filename + "'", e);
+        }
+        return this;
+    }
+
+    public void close()
+    {
+        try
+        {
+            this.reader.close();
+        }
+        catch (final Throwable t)
+        {
+            // ignored
         }
     }
 

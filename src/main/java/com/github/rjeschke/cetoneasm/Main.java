@@ -93,7 +93,7 @@ public class Main
         Con.info("-----------------------------------------------------");
         CounterState.get().reset();
         final Config config = new Config();
-        final Assembler rt = new Assembler();
+        final Assembler rt = new Assembler(config);
         final Tokenizer tok = new Tokenizer(config, "/home/rjeschke/Dropbox/testing.casm");
         try
         {
@@ -149,6 +149,10 @@ public class Main
         catch (final LinkerException le)
         {
             reportLinkerError(le);
+        }
+        finally
+        {
+            tok.close();
         }
         Con.info("READY.");
         System.exit(0);

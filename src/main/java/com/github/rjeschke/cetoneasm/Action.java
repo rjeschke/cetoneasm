@@ -16,6 +16,9 @@
 
 package com.github.rjeschke.cetoneasm;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public abstract class Action
 {
     protected final FileLocation location;
@@ -38,6 +41,11 @@ public abstract class Action
     public void error(final String message, final Throwable cause) throws AssemblerException
     {
         throw new AssemblerException(this.location, message, cause);
+    }
+
+    public List<Action> getNestedActions()
+    {
+        return new ArrayList<Action>();
     }
 
     public abstract void run(Assembler assembler) throws AssemblerException;

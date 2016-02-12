@@ -45,11 +45,11 @@ import com.github.rjeschke.cetoneasm.actions.WriteStringAction;
 
 public class Parser
 {
-    private final List<Token>             tokens;
-    private int                           position           = 0;
-    private final Assembler               evalRuntime        = new Assembler();
-    private boolean                       topLevel           = true;
-    private boolean                       inMacroDefinition  = false;
+    private final List<Token> tokens;
+    private int               position          = 0;
+    private final Assembler   evalRuntime       = new Assembler(new Config());
+    private boolean           topLevel          = true;
+    private boolean           inMacroDefinition = false;
 
     private Parser(final List<Token> tokens)
     {

@@ -18,7 +18,7 @@ package com.github.rjeschke.cetoneasm;
 
 public class Server
 {
-    private final Assembler assembler = new Assembler();
+    private final Assembler assembler = new Assembler(new Config());
 
     public static void startServer(final int port)
     {

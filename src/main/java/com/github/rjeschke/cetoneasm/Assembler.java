@@ -51,6 +51,7 @@ public class Assembler
     private int                                      jumpId             = -1;
     private boolean                                  throwIfUnitialized = false;
     private String                                   parentLabel        = null;
+    private final Config                             config;
 
     private static String[]                          PASS_NAMES         = Colls.objArray(
                                                                                 "Resolve and import include files",
@@ -60,9 +61,10 @@ public class Assembler
                                                                                 "First assembly pass",
                                                                                 "Final assembly pass");
 
-    public Assembler()
+    public Assembler(final Config config)
     {
         this.init();
+        this.config = config;
     }
 
     public void init()
@@ -114,6 +116,16 @@ public class Assembler
             this.throwIfUnitialized = true;
             break;
         }
+    }
+
+    public String resolveFilename(final String filename)
+    {
+        return filename;
+    }
+
+    public Config getConfig()
+    {
+        return this.config;
     }
 
     public boolean isFinalPass()
