@@ -38,19 +38,23 @@
                 </context>
 
                 <context id="hex2" style-ref="basen">
-                    <match>0(xX)[0-9a-fA-F]+</match>
+                    <match>0[xX][0-9a-fA-F]+</match>
                 </context>
 
                 <context id="oct" style-ref="basen">
-                    <match>0(oO)[0-7]+</match>
+                    <match>0[oO][0-7]+</match>
                 </context>
 
                 <context id="bin" style-ref="basen">
-                    <match>0(bB)[0-1]+</match>
+                    <match>0[bB][0-1]+</match>
                 </context>
 
                 <context id="decimal" style-ref="decimal">
-                    <match>[0-9]+</match>
+                  <match extended="true">
+                    (?&lt;![\w\.])
+                    (0|[1-9][0-9]*)
+                    (?![\w\.])
+                  </match>
                 </context>
 
                 <context id="preprocessor" style-ref="preprocessor">
