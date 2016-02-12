@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
 import java.util.List;
 
 import com.github.rjeschke.cetoneasm.emu.Machine;
@@ -32,6 +33,19 @@ import com.github.rjeschke.neetutils.collections.Colls;
 
 public class Main
 {
+    private static void exit(final int code)
+    {
+        if (code == 0)
+        {
+            Con.info("READY.");
+        }
+        else
+        {
+            Con.error("FAILED.");
+        }
+        System.exit(code);
+    }
+
     private static String getStackTrace(final Throwable t)
     {
         final ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -59,7 +73,7 @@ public class Main
                     + " (" + te.getCause().getMessage() + ")");
             Con.error(getStackTrace(te));
         }
-        System.exit(1);
+        exit(1);
     }
 
     private static void reportLinkerError(final LinkerException le)
@@ -73,7 +87,7 @@ public class Main
             Con.error("Exception -> " + le.getMessage() + " (" + le.getCause().getMessage() + ")");
             Con.error(getStackTrace(le));
         }
-        System.exit(3);
+        exit(3);
     }
 
     private static void reportAssemblerError(final AssemblerException ae)
@@ -88,11 +102,33 @@ public class Main
             {
                 reportTokenizerError((TokenizerException)ae.getCause());
             }
+            else if (ae.getCause() instanceof AssemblerException)
+            {
+                reportAssemblerError(((AssemblerException)ae.getCause()));
+            }
             Con.error("Exception in " + ae.getLocation() + " -> " + ae.getMessage()
                     + " (" + ae.getCause().getMessage() + ")");
             Con.error(getStackTrace(ae));
         }
-        System.exit(2);
+        exit(2);
+    }
+
+    private static void startExternalEmulator(final String emulator, final List<String> commandLine, final String prg)
+    {
+        final ArrayList<String> command = new ArrayList<String>();
+        command.add(emulator);
+        command.addAll(commandLine);
+        command.add(prg);
+        final ProcessBuilder pb = new ProcessBuilder(command);
+        pb.inheritIO();
+        try
+        {
+            pb.start();
+        }
+        catch (final IOException e)
+        {
+            Con.error("Failed to start emulator: " + e.getMessage());
+        }
     }
 
     private static void writeString(final String filename, final String str)
@@ -113,7 +149,7 @@ public class Main
         {
             Con.error("Could not write to file '%s'", filename);
             Con.error(getStackTrace(e));
-            System.exit(10);
+            exit(10);
         }
     }
 
@@ -135,7 +171,7 @@ public class Main
         {
             Con.error("Could not write to file '%s'", filename);
             Con.error(getStackTrace(e));
-            System.exit(11);
+            exit(11);
         }
     }
 
@@ -149,7 +185,7 @@ public class Main
         catch (final IOException e)
         {
             Con.error("Cmdline error: " + e.getMessage() + "\n");
-            System.exit(5);
+            exit(5);
         }
     }
 
@@ -169,20 +205,20 @@ public class Main
         {
             Con.error(e.getMessage() + "\n");
             printHelp();
-            System.exit(5);
+            exit(5);
         }
 
         if (config.printHelp)
         {
             printHelp();
-            System.exit(0);
+            exit(0);
         }
 
         if (rest == null || rest.isEmpty())
         {
             Con.error("Missing input file(s)\n");
             printHelp();
-            System.exit(6);
+            exit(6);
         }
 
         if (config.outputFile.isEmpty())
@@ -290,6 +326,12 @@ public class Main
                     machine.execute(loadAddress, config.verboseEmulation, config.xverboseEmulation);
                     Con.info("Finished emulation");
                 }
+
+                if (config.runExternalEmulator)
+                {
+                    Con.info("Starting external emulator");
+                    startExternalEmulator("/usr/bin/x64", new ArrayList<String>(), config.outputFile);
+                }
             }
         }
         catch (final AssemblerException ae)
@@ -300,7 +342,6 @@ public class Main
         {
             reportLinkerError(le);
         }
-        Con.info("READY.");
-        System.exit(0);
+        exit(0);
     }
 }

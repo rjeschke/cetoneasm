@@ -23,18 +23,33 @@ import com.github.rjeschke.cetoneasm.FileLocation;
 
 public class SetLabelAction extends Action
 {
-    private String labelName;
+    private String        labelName;
+    private final boolean isMacroLabel;
 
     public SetLabelAction(final FileLocation location, final String labelName)
     {
+        this(location, labelName, false);
+    }
+
+    public SetLabelAction(final FileLocation location, final String labelName, final boolean isMacroLabel)
+    {
         super(location);
         this.labelName = labelName;
+        this.isMacroLabel = isMacroLabel;
     }
 
     @Override
     public void run(final Assembler assembler) throws AssemblerException
     {
-        assembler.setLabelAddress(this.labelName, assembler.getPC());
+        // Hack to allow .MACRO to set initial @
+        if (this.isMacroLabel && !assembler.isPcSet())
+        {
+            assembler.setLabelAddress(this.labelName, 0);
+        }
+        else
+        {
+            assembler.setLabelAddress(this.labelName, assembler.getPC());
+        }
     }
 
     public String getLabelName()

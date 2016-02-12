@@ -24,6 +24,7 @@ import com.github.rjeschke.cetoneasm.Opcodes.Opcode;
 import com.github.rjeschke.cetoneasm.Token.Type;
 import com.github.rjeschke.cetoneasm.actions.AssembleOpcodeAction;
 import com.github.rjeschke.cetoneasm.actions.AssembleOpcodeAction.WidthType;
+import com.github.rjeschke.cetoneasm.actions.BinaryIncludeAction;
 import com.github.rjeschke.cetoneasm.actions.BinaryOperatorAction;
 import com.github.rjeschke.cetoneasm.actions.CallMacroAction;
 import com.github.rjeschke.cetoneasm.actions.ConditionalJumpAction;
@@ -36,11 +37,13 @@ import com.github.rjeschke.cetoneasm.actions.IncludeAction;
 import com.github.rjeschke.cetoneasm.actions.JumpIdAction;
 import com.github.rjeschke.cetoneasm.actions.JumpToIdAction;
 import com.github.rjeschke.cetoneasm.actions.LoadNumberAction;
+import com.github.rjeschke.cetoneasm.actions.MessageAction;
 import com.github.rjeschke.cetoneasm.actions.MetaGotoAction;
 import com.github.rjeschke.cetoneasm.actions.MetaLabelAction;
 import com.github.rjeschke.cetoneasm.actions.SetLabelAction;
 import com.github.rjeschke.cetoneasm.actions.SetVariableAction;
 import com.github.rjeschke.cetoneasm.actions.StoreDataAction;
+import com.github.rjeschke.cetoneasm.actions.StoreStringAction;
 import com.github.rjeschke.cetoneasm.actions.UnaryOperatorAction;
 import com.github.rjeschke.cetoneasm.actions.WriteStringAction;
 
@@ -311,6 +314,95 @@ public class Parser
         this.consume();
     }
 
+    private void parseMessage(final List<Action> actions, final MetaCommand mc) throws AssemblerException
+    {
+        final FileLocation fl = this.getFileLocation();
+        MessageAction.Type type = null;
+        switch (mc)
+        {
+        case INFO:
+            type = MessageAction.Type.INFO;
+            break;
+        case INFOF:
+            type = MessageAction.Type.INFOF;
+            break;
+        case WARN:
+            type = MessageAction.Type.WARN;
+            break;
+        case WARNF:
+            type = MessageAction.Type.WARNF;
+            break;
+        case ERROR:
+            type = MessageAction.Type.ERROR;
+            break;
+        case ERRORF:
+            type = MessageAction.Type.ERRORF;
+            break;
+        default:
+            throw new AssemblerException(this.getFileLocation(), "You're doing it wrong, Cetone!");
+        }
+
+        if (type.isFormatted() && this.peek().getType() != Token.Type.STRING)
+        {
+            throw new AssemblerException(this.getFileLocation(), "String expected");
+        }
+
+        final List<List<Action>> arguments = new ArrayList<List<Action>>();
+        for (;;)
+        {
+            if (this.peek().getType() == Token.Type.STRING)
+            {
+                final ArrayList<Action> string = new ArrayList<Action>();
+                string.add(new StoreStringAction(this.getFileLocation(), this.getStringValue()));
+                arguments.add(string);
+                this.consume();
+            }
+            else
+            {
+                arguments.add(this.parseExpression());
+            }
+            if (this.peek().getType() == Token.Type.COMMA)
+            {
+                this.consume();
+                continue;
+            }
+            break;
+        }
+
+        actions.add(new MessageAction(fl, type, arguments));
+    }
+
+    private void parseBinclude(final List<Action> actions) throws AssemblerException
+    {
+        final FileLocation fl = this.getFileLocation();
+        if (this.peek().getType() != Token.Type.STRING)
+        {
+            throw new AssemblerException(this.getFileLocation(), "String expected");
+        }
+        final String filename = this.getStringValue();
+        this.consume();
+        if (this.peek().getType() == Token.Type.COMMA)
+        {
+            this.consume();
+            actions.addAll(this.parseExpression());
+            if (this.peek().getType() == Token.Type.COMMA)
+            {
+                this.consume();
+                actions.addAll(this.parseExpression());
+            }
+            else
+            {
+                actions.add(new LoadNumberAction(this.getFileLocation(), -1));
+            }
+        }
+        else
+        {
+            actions.add(new LoadNumberAction(this.getFileLocation(), 0));
+            actions.add(new LoadNumberAction(this.getFileLocation(), -1));
+        }
+        actions.add(new BinaryIncludeAction(fl, filename));
+    }
+
     private void parseMeta(final List<Action> actions) throws AssemblerException
     {
         final MetaCommand mc = MetaCommand.byName(this.peek().getStringValue());
@@ -385,6 +477,19 @@ public class Parser
             }
             actions.add(new IncludeAction(this.getFileLocation(), this.getStringValue()));
             this.consume();
+            break;
+        case BINCLUDE:
+            this.consume();
+            this.parseBinclude(actions);
+            break;
+        case INFO:
+        case INFOF:
+        case WARN:
+        case WARNF:
+        case ERROR:
+        case ERRORF:
+            this.consume();
+            this.parseMessage(actions, mc);
             break;
         default:
             throw new AssemblerException(this.getFileLocation(), "Unimplemented meta command '" + mc + "'");

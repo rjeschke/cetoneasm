@@ -3,13 +3,11 @@ cetoneasm - A C64 (Cross) Macro Assembler
 
 TODO:
 --
-
-* `.BINCLUDE`
-* `.INFO`, `.WARN`, `.ERROR`
 * configuration file
-* server mode
+* server mode *(?)*
 * endless loop detection (detection implemented, now handle it)
-* `.CONST` ?
+* `.CONST` *(?)*
+
 
 Number literals:
 --
@@ -85,6 +83,7 @@ to all indirect addressing modes. If you really need braces, rearrange the
 operands so that the expression does not start with a `(` or prepend something
  like `0 |` or `0 +` to avoid mistakes.
 
+
 Opcode format:
 --
 `cetoneasm` does not support explicitly specifying `A` for opcodes that operate
@@ -94,6 +93,7 @@ Otherwise `cetoneasm` uses the following table (by Graham/Oxyron) for opcode nam
 and addressing modes: http://www.oxyron.de/html/opcodes02.html
 
 Operands are of type *expression*.
+
 
 Meta commands:
 --
@@ -109,7 +109,7 @@ Meta commands:
 * `.LABEL` *identifier*
 * `.GOTO` *identifier*
 * `.INCLUDE` *name-ascii-str*
-* `.BINCLUDE` *name-ascii-str*[, *skip-bytes-number*, *length-number*]
+* `.BINCLUDE` *name-ascii-str*[, *skip-bytes-expr*[, *length-expr*]]
 * `.INFO`/`.INFOF` *strings/exprs*
 * `.WARN`/`.WARNF` *strings/exprs*
 * `.ERROR`/`.ERRORF` *strings/exprs*
@@ -138,9 +138,10 @@ Common pitfalls and quirks:
   is mangled into locals anyway
 * `.MACRO` names have their own namespace and can therefore be identical to already
   defines variable or label names
+* `@` is the only (global) variable that can be modified from inside a `.MACRO`
 * `.INCLUDE` is evaluated in the very first pass, there's no other evaluation going
   on. This means that you can not do conditional includes. Includes *always* get
-  included.
+  included. Also, currently you can include each file only once.
 
 Internals:
 --
@@ -156,6 +157,9 @@ label, `$$` and the local label, e.g. `LOOP$$_LOOP`.
 Labels and variables (also arguments) defined in `.MACRO` are converted to local
 labels/variables by prepending `__`, e.g. `__ADDR`. A label, consisting of the
 macro's name and an index is created as the parent label, e.g. `MY_MACRO$1:`.
+
+There's a special case implemented that allows macro parent labels to be defined
+*before* `@` was set for the first time.
 
 **Why .GOTO and .LABEL?**
 
@@ -207,5 +211,3 @@ variables or labels were used and then skip the last two passes, also the third
 assembly pass is just for my paranoid self (and should only be needed for very,
 very few situations (e.g. compiling into the zeropage while crossing page one's
 border). 
-
-  

@@ -42,47 +42,71 @@ public class DefineMacroAction extends MetaAction
         this.prepare();
     }
 
+    private static void addDefines(final Action a, final HashSet<String> def)
+    {
+        if (a instanceof SetVariableAction)
+        {
+            final String varName = ((SetVariableAction)a).getVariableName();
+            if (!"@".equals(varName))
+            {
+                def.add(varName);
+            }
+        }
+        else if (a instanceof SetLabelAction)
+        {
+            def.add(((SetLabelAction)a).getLabelName());
+        }
+
+        for (final Action b : a.getNestedActions())
+        {
+            addDefines(b, def);
+        }
+    }
+
+    private static void mangle(final Action a, final HashSet<String> def)
+    {
+        if (a instanceof SetVariableAction)
+        {
+            final SetVariableAction sva = (SetVariableAction)a;
+            if (def.contains(sva.getVariableName()))
+            {
+                sva.makeLocal();
+            }
+        }
+        else if (a instanceof SetLabelAction)
+        {
+            final SetLabelAction sla = (SetLabelAction)a;
+            if (def.contains(sla.getLabelName()))
+            {
+                sla.makeLocal();
+            }
+        }
+        else if (a instanceof GetVariableAction)
+        {
+            final GetVariableAction gva = (GetVariableAction)a;
+            if (def.contains(gva.getVariableName()))
+            {
+                gva.makeLocal();
+            }
+        }
+
+        for (final Action b : a.getNestedActions())
+        {
+            mangle(b, def);
+        }
+    }
+
     private void prepare()
     {
         final HashSet<String> def = new HashSet<String>(this.arguments);
         for (final Action a : this.actions)
         {
-            if (a instanceof SetVariableAction)
-            {
-                def.add(((SetVariableAction)a).getVariableName());
-            }
-            else if (a instanceof SetLabelAction)
-            {
-                def.add(((SetLabelAction)a).getLabelName());
-            }
+            addDefines(a, def);
         }
 
         for (final Action a : this.actions)
         {
-            if (a instanceof SetVariableAction)
-            {
-                final SetVariableAction sva = (SetVariableAction)a;
-                if (def.contains(sva.getVariableName()))
-                {
-                    sva.makeLocal();
-                }
-            }
-            else if (a instanceof SetLabelAction)
-            {
-                final SetLabelAction sla = (SetLabelAction)a;
-                if (def.contains(sla.getLabelName()))
-                {
-                    sla.makeLocal();
-                }
-            }
-            else if (a instanceof GetVariableAction)
-            {
-                final GetVariableAction gva = (GetVariableAction)a;
-                if (def.contains(gva.getVariableName()))
-                {
-                    gva.makeLocal();
-                }
-            }
+            mangle(a, def);
         }
 
         for (int i = 0; i < this.arguments.size(); i++)
@@ -102,7 +126,7 @@ public class DefineMacroAction extends MetaAction
                     + ", got " + args.size());
         }
 
-        ret.add(new SetLabelAction(caller, this.name + "$" + id));
+        ret.add(new SetLabelAction(caller, this.name + "$" + id, true));
 
         // Create args assignment
         for (int i = 0; i < this.arguments.size(); i++)
@@ -114,32 +138,6 @@ public class DefineMacroAction extends MetaAction
         ret.addAll(this.actions);
 
         return ret;
-    }
-
-    public List<String> getDefinedVariables()
-    {
-        final HashSet<String> def = new HashSet<String>();
-        for (final Action a : this.actions)
-        {
-            if (a instanceof SetVariableAction)
-            {
-                def.add(((SetVariableAction)a).getVariableName());
-            }
-        }
-        return new ArrayList<String>(def);
-    }
-
-    public List<String> getDefinedLabels()
-    {
-        final HashSet<String> def = new HashSet<String>();
-        for (final Action a : this.actions)
-        {
-            if (a instanceof SetLabelAction)
-            {
-                def.add(((SetLabelAction)a).getLabelName());
-            }
-        }
-        return new ArrayList<String>(def);
     }
 
     public String getName()

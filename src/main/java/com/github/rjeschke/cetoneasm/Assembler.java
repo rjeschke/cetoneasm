@@ -131,9 +131,9 @@ public class Assembler
         }
     }
 
-    public String resolveFilename(final String originalFilename)
+    public String resolveFilename(final String originalFilename, final boolean addExtension)
     {
-        final String filename = U.addCasmFileExtension(originalFilename);
+        final String filename = addExtension ? U.addCasmFileExtension(originalFilename) : originalFilename;
         File f = new File(filename);
         if (f.exists())
         {
@@ -233,6 +233,11 @@ public class Assembler
         {
             throw new AssemblerException(null, "@ wrapped from $FFFF->$0000");
         }
+    }
+
+    public boolean isPcSet()
+    {
+        return this.pcVariable.isInitialized();
     }
 
     public int getPC() throws AssemblerException
@@ -373,7 +378,7 @@ public class Assembler
                 if (action instanceof IncludeAction)
                 {
                     final IncludeAction ia = (IncludeAction)action;
-                    final String filename = this.resolveFilename(ia.getFileName());
+                    final String filename = this.resolveFilename(ia.getFileName(), true);
                     if (!includedFiles.contains(filename))
                     {
                         Con.info("  Parsing include file '%s'", filename);
