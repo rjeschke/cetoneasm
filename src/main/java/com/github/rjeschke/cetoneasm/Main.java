@@ -88,16 +88,19 @@ public class Main
 
     public static void main(final String[] args) throws TokenizerException
     {
+        final String inputFile = "/home/rjeschke/Dropbox/testing.casm";
+
         Con.initialize();
         Con.info("cetoneasm v1.0, (c) 2016 René 'Neotec/Cetone' Jeschke");
         Con.info("-----------------------------------------------------");
         CounterState.get().reset();
         final Config config = new Config();
         final Assembler rt = new Assembler(config);
-        final Tokenizer tok = new Tokenizer(config, "/home/rjeschke/Dropbox/testing.casm");
+        final Tokenizer tok = new Tokenizer(config, inputFile);
         try
         {
             tok.open();
+            rt.addIncludeFromFilename(inputFile);
             Con.info("Parsing");
             final List<Action> actions = Parser.parse(tok);
             Con.info("Generating code");

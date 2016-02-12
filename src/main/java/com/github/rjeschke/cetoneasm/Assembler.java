@@ -16,16 +16,19 @@
 
 package com.github.rjeschke.cetoneasm;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 
 import com.github.rjeschke.cetoneasm.actions.CallMacroAction;
 import com.github.rjeschke.cetoneasm.actions.CounterSetAction;
 import com.github.rjeschke.cetoneasm.actions.DefineMacroAction;
+import com.github.rjeschke.cetoneasm.actions.IncludeAction;
 import com.github.rjeschke.cetoneasm.actions.JumpIdAction;
 import com.github.rjeschke.cetoneasm.actions.JumpToIdAction;
 import com.github.rjeschke.cetoneasm.actions.MetaGotoAction;
@@ -37,6 +40,7 @@ import com.github.rjeschke.neetutils.collections.Colls;
 public class Assembler
 {
     private final static int                         FINAL_PASS         = 5;
+    private final ArrayList<String>                  includePaths       = new ArrayList<String>();
     private final HashMap<String, Variable>          variables          = new HashMap<String, Variable>();
     private final HashMap<String, Variable>          labels             = new HashMap<String, Variable>();
     private final HashMap<String, DefineMacroAction> definedMacros      = new HashMap<String, DefineMacroAction>();
@@ -118,9 +122,35 @@ public class Assembler
         }
     }
 
+    public void addIncludeFromFilename(final String filename)
+    {
+        final String norm = new File(U.normalizePath(new File(filename).getAbsolutePath())).getParent();
+        if (!this.includePaths.contains(filename))
+        {
+            this.includePaths.add(norm);
+        }
+    }
+
     public String resolveFilename(final String filename)
     {
-        return filename;
+        File f = new File(filename);
+        if (f.exists())
+        {
+            final String norm = U.normalizePath(f.getAbsolutePath());
+            this.addIncludeFromFilename(norm);
+            return norm;
+        }
+        for (final String inc : this.includePaths)
+        {
+            f = new File(inc, filename);
+            if (f.exists())
+            {
+                final String norm = U.normalizePath(f.getAbsolutePath());
+                this.addIncludeFromFilename(norm);
+                return norm;
+            }
+        }
+        return null;
     }
 
     public Config getConfig()
@@ -331,10 +361,36 @@ public class Assembler
         try
         {
             final ArrayList<Action> actions = new ArrayList<Action>(iActions);
+            final HashSet<String> includedFiles = new HashSet<String>();
 
             // ////////////////////////////////////////////////////////////////
             // Pass 1: .INCLUDE
             this.startPass(0);
+            for (int i = 0; i < actions.size(); i++)
+            {
+                final Action action = currentAction = actions.get(i);
+                if (action instanceof IncludeAction)
+                {
+                    final IncludeAction ia = (IncludeAction)action;
+                    final String filename = this.resolveFilename(ia.getFileName());
+                    if (!includedFiles.contains(filename))
+                    {
+                        includedFiles.add(filename);
+                        if (filename == null)
+                        {
+                            throw new AssemblerException(action.getLocation(), "Can not find include file '"
+                                    + ia.getFileName() + "'");
+                        }
+                        actions.remove(i);
+                        actions.addAll(i, ia.doInclude(this, filename));
+                        i--;
+                    }
+                    else
+                    {
+                        actions.remove(i--);
+                    }
+                }
+            }
 
             // ////////////////////////////////////////////////////////////////
             // Pass 2: :MACRO, .CALL

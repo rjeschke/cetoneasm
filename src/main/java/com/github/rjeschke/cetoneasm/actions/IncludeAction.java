@@ -38,14 +38,13 @@ public class IncludeAction extends MetaAction
         this.filename = filename;
     }
 
-    public List<Action> doInclude(final Assembler assembler) throws AssemblerException
+    public String getFileName()
     {
-        final String resolved = assembler.resolveFilename(this.filename);
-        if (resolved == null)
-        {
-            this.error("Can not find include file '" + this.filename + "'");
-        }
+        return this.filename;
+    }
 
+    public List<Action> doInclude(final Assembler assembler, final String resolved) throws AssemblerException
+    {
         final Tokenizer tok = new Tokenizer(assembler.getConfig(), resolved);
         try
         {
