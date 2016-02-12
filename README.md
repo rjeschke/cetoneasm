@@ -22,7 +22,7 @@ Number literals:
 
 String literals:
 --
-Strings literals are only support as arguments to (some) meta commands.
+Strings literals are only supported as arguments to (some) meta commands.
 
 * `"ASCII STRING"` - ASCII
 * `a"ASCII STRING"` - ASCII

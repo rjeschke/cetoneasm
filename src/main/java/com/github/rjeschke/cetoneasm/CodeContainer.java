@@ -17,6 +17,7 @@
 package com.github.rjeschke.cetoneasm;
 
 import java.io.ByteArrayOutputStream;
+import java.util.HashMap;
 
 import com.github.rjeschke.cetoneasm.Opcodes.Opcode;
 
@@ -76,6 +77,11 @@ public class CodeContainer implements Comparable<CodeContainer>
     @Override
     public String toString()
     {
+        return this.toString(new HashMap<Integer, String>());
+    }
+
+    public String toString(final HashMap<Integer, String> labelMap)
+    {
         final StringBuilder sb = new StringBuilder();
         if (this.dataContainer)
         {
@@ -115,6 +121,7 @@ public class CodeContainer implements Comparable<CodeContainer>
             final StringBuilder line = new StringBuilder();
             for (int pc = 0; pc < this.position;)
             {
+                final String label = labelMap.get(Integer.valueOf(pc + this.startAddress));
                 final int opc = this.buffer[pc] & 255;
                 final Opcode op = Opcodes.BY_CODE[opc];
                 line.setLength(0);
@@ -230,6 +237,15 @@ public class CodeContainer implements Comparable<CodeContainer>
                 else
                 {
                     line.append(cycles);
+                }
+
+                if (label != null)
+                {
+                    while (line.length() < 36)
+                    {
+                        line.append(' ');
+                    }
+                    line.append(label);
                 }
 
                 sb.append(line);

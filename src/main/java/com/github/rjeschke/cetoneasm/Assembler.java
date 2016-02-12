@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map.Entry;
 
 import com.github.rjeschke.cetoneasm.actions.CallMacroAction;
 import com.github.rjeschke.cetoneasm.actions.CounterSetAction;
@@ -585,6 +586,37 @@ public class Assembler
             }
             throw ae;
         }
+    }
+
+    private static boolean isMacroLabel(final String label)
+    {
+        return !label.contains("$$") && label.contains("$");
+    }
+
+    public HashMap<Integer, String> getLabelMap()
+    {
+        final HashMap<Integer, String> map = new HashMap<Integer, String>();
+        for (final Entry<String, Variable> e : this.labels.entrySet())
+        {
+            if (e.getValue().isInitialized())
+            {
+                final String name = e.getKey();
+                final Integer addr = Integer.valueOf((int)e.getValue().get() & 65535);
+                if (map.containsKey(addr))
+                {
+                    final String aLabel = map.get(addr);
+                    if (isMacroLabel(aLabel))
+                    {
+                        map.put(addr, name);
+                    }
+                }
+                else
+                {
+                    map.put(addr, name);
+                }
+            }
+        }
+        return map;
     }
 
     private static class ActionIterable implements Iterable<Action>

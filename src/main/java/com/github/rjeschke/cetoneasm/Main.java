@@ -25,6 +25,7 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import com.github.rjeschke.cetoneasm.emu.Machine;
@@ -241,7 +242,7 @@ public class Main
         }
 
         CounterState.get().reset();
-        final Assembler rt = new Assembler(config);
+        final Assembler assembler = new Assembler(config);
 
         final List<Action> actions = Colls.list();
 
@@ -252,7 +253,7 @@ public class Main
             try
             {
                 tok.open();
-                rt.addIncludeFromFilename(inputFile);
+                assembler.addIncludeFromFilename(inputFile);
                 Con.info("Parsing '%s'...", inputFile);
                 actions.addAll(Parser.parse(tok));
             }
@@ -273,7 +274,7 @@ public class Main
         try
         {
             Con.info("Generating code");
-            final List<CodeContainer> containers = rt.assemble(config, actions);
+            final List<CodeContainer> containers = assembler.assemble(config, actions);
             if (containers.isEmpty())
             {
                 Con.warn(" No code generated");
@@ -296,10 +297,11 @@ public class Main
                 if (config.createDisassembly)
                 {
                     Con.info("Generating disassembly");
+                    final HashMap<Integer, String> labelMap = assembler.getLabelMap();
                     final StringBuilder disasm = new StringBuilder();
                     for (final CodeContainer cc : containers)
                     {
-                        disasm.append(cc.toString());
+                        disasm.append(cc.toString(labelMap));
                         disasm.append('\n');
                     }
                     final String disFile = U.replaceExtension(config.outputFile, ".disasm");
