@@ -439,6 +439,7 @@ public class Parser
             {
             case PC:
             case WORD:
+            case SUB_WORD:
             {
                 final GetVariableAction gva = new GetVariableAction(this.getFileLocation(), this.getStringValue());
                 lActions.add(gva);
