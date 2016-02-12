@@ -22,6 +22,8 @@ import com.github.rjeschke.neetutils.Strings;
 
 public final class U
 {
+    private final static String CASM_EXT = ".casm64";
+
     private U()
     {
         // meh!
@@ -52,5 +54,14 @@ public final class U
         }
 
         return Strings.join(comps, isWindows() ? "\\" : "/");
+    }
+
+    public static String addFileExtension(final String path)
+    {
+        if (!path.contains("."))
+        {
+            return path + CASM_EXT;
+        }
+        return path;
     }
 }

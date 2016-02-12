@@ -88,7 +88,7 @@ public class Main
 
     public static void main(final String[] args) throws TokenizerException
     {
-        final String inputFile = "/home/rjeschke/Dropbox/testing.casm";
+        final String inputFile = U.normalizePath(U.addFileExtension("/home/rjeschke/Dropbox/testing"));
 
         Con.initialize();
         Con.info("cetoneasm v1.0, (c) 2016 René 'Neotec/Cetone' Jeschke");
@@ -100,6 +100,8 @@ public class Main
         try
         {
             tok.open();
+            Con.info("Assembling '" + inputFile + "'");
+            Con.info("---");
             rt.addIncludeFromFilename(inputFile);
             Con.info("Parsing");
             final List<Action> actions = Parser.parse(tok);

@@ -32,6 +32,7 @@ import com.github.rjeschke.cetoneasm.actions.CounterDecrementAction;
 import com.github.rjeschke.cetoneasm.actions.CounterSetAction;
 import com.github.rjeschke.cetoneasm.actions.DefineMacroAction;
 import com.github.rjeschke.cetoneasm.actions.GetVariableAction;
+import com.github.rjeschke.cetoneasm.actions.IncludeAction;
 import com.github.rjeschke.cetoneasm.actions.JumpIdAction;
 import com.github.rjeschke.cetoneasm.actions.JumpToIdAction;
 import com.github.rjeschke.cetoneasm.actions.LoadNumberAction;
@@ -374,6 +375,15 @@ public class Parser
                 throw new AssemblerException(this.getFileLocation(), "Identifier expected");
             }
             actions.add(new MetaGotoAction(this.getFileLocation(), this.getStringValue()));
+            this.consume();
+            break;
+        case INCLUDE:
+            this.consume();
+            if (this.peek().getType() != Token.Type.STRING)
+            {
+                throw new AssemblerException(this.getFileLocation(), "String expected");
+            }
+            actions.add(new IncludeAction(this.getFileLocation(), this.getStringValue()));
             this.consume();
             break;
         default:

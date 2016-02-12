@@ -131,8 +131,9 @@ public class Assembler
         }
     }
 
-    public String resolveFilename(final String filename)
+    public String resolveFilename(final String originalFilename)
     {
+        final String filename = U.addFileExtension(originalFilename);
         File f = new File(filename);
         if (f.exists())
         {
@@ -375,6 +376,7 @@ public class Assembler
                     final String filename = this.resolveFilename(ia.getFileName());
                     if (!includedFiles.contains(filename))
                     {
+                        Con.info("  Parsing include file '%s'", filename);
                         includedFiles.add(filename);
                         if (filename == null)
                         {
@@ -387,6 +389,7 @@ public class Assembler
                     }
                     else
                     {
+                        Con.info("  Skipping include file '%s', already included", filename);
                         actions.remove(i--);
                     }
                 }
