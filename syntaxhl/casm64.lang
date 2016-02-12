@@ -166,7 +166,7 @@
                 </context>
 
                 <context id="identifier" style-ref="variable">
-                    <match>(@|[_a-zA-Z0-9]+)</match>
+                    <match>(@|[_a-zA-Z][_a-zA-Z0-9]*)</match>
                 </context>
             </include>
         </context>
