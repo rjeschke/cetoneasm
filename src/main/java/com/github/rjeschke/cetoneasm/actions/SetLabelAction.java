@@ -59,7 +59,7 @@ public class SetLabelAction extends Action
 
     public void makeLocal()
     {
-        if (!this.labelName.startsWith("_"))
+        if (!this.labelName.startsWith("__"))
         {
             this.labelName = "__" + this.labelName;
         }

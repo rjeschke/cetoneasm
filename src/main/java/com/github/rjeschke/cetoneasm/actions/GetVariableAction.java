@@ -39,7 +39,7 @@ public class GetVariableAction extends Action
 
     public void makeLocal()
     {
-        if (!this.variableName.startsWith("_"))
+        if (!this.variableName.startsWith("__"))
         {
             this.variableName = "__" + this.variableName;
         }

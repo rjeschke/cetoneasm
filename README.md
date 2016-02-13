@@ -1,9 +1,11 @@
 cetoneasm - A C64 (Cross) Macro Assembler
 =========================================
 
-TODO:
+TODO/Issues:
 --
 * configuration file
+* emulation verbose output skips (display of) opcode after branch
+  because of the was the decoding gets pipelined
 * endless loop detection (detection implemented, now handle it)
 
 
@@ -132,8 +134,6 @@ Common pitfalls and quirks:
   of macros
 * it is possible to read/modify local macro variables after macro expansion, as those
   do not contain unusable identifier characters and therefore leak
-* there is no need to use local variables or labels inside of `.MACRO` as everything
-  is mangled into locals anyway
 * `.MACRO` names have their own namespace and can therefore be identical to already
   defines variable or label names
 * `@` is the only (global) variable that can be modified from inside a `.MACRO`
