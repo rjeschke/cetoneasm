@@ -241,7 +241,7 @@ public class CodeContainer implements Comparable<CodeContainer>
 
                 if (label != null)
                 {
-                    while (line.length() < 36)
+                    while (line.length() < 37)
                     {
                         line.append(' ');
                     }

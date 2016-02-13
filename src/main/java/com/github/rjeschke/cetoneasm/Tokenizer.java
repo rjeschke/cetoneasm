@@ -167,6 +167,10 @@ public class Tokenizer
         {
             return Token.tOPCODE(this, str);
         }
+        if (str.startsWith("__"))
+        {
+            throw new TokenizerException(this, "Usage of '__' variables is forbidden");
+        }
         return str.charAt(0) == '_' ? Token.tSUB_WORD(this, str) : Token.tWORD(this, str);
     }
 
