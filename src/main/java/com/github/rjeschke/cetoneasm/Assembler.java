@@ -56,6 +56,7 @@ public class Assembler
     private int                                      jumpId             = -1;
     private boolean                                  throwIfUnitialized = false;
     private String                                   parentLabel        = null;
+    private String                                   macroParentLabel   = null;
     private final Config                             config;
 
     private static String[]                          PASS_NAMES         = Colls.objArray(
@@ -85,6 +86,7 @@ public class Assembler
         this.arithSp = 0;
         this.jumpId = -1;
         this.parentLabel = null;
+        this.macroParentLabel = null;
     }
 
     private void startPass(final int index)
@@ -94,6 +96,7 @@ public class Assembler
         this.passNumber = index;
         this.jumpId = -1;
         this.parentLabel = null;
+        this.macroParentLabel = null;
 
         switch (index)
         {
@@ -256,11 +259,12 @@ public class Assembler
 
         if (labelName.startsWith("_"))
         {
-            if (this.parentLabel == null)
+            final String parent = labelName.startsWith("__") ? this.macroParentLabel : this.parentLabel;
+            if (parent == null)
             {
                 throw new AssemblerException(null, "Local label '" + labelName + "'without parent");
             }
-            var = this.labels.get(this.parentLabel + "$$" + labelName);
+            var = this.labels.get(parent + "$$" + labelName);
         }
         else
         {
@@ -271,7 +275,12 @@ public class Assembler
         {
             throw new AssemblerException(null, "Undefined label '" + labelName + "'");
         }
-        if (!labelName.contains("$$") && !labelName.startsWith("_"))
+
+        if (isMacroLabel(labelName))
+        {
+            this.macroParentLabel = labelName;
+        }
+        else if (!labelName.contains("$$") && !labelName.startsWith("_"))
         {
             this.parentLabel = labelName;
         }
@@ -283,11 +292,12 @@ public class Assembler
         Variable var = null;
         if (name.startsWith("_"))
         {
-            if (this.parentLabel == null)
+            final String parent = name.startsWith("__") ? this.macroParentLabel : this.parentLabel;
+            if (parent == null)
             {
-                throw new AssemblerException(null, "Local variable '" + name + "'without parent");
+                throw new AssemblerException(null, "Local variable '" + name + "' without parent");
             }
-            final String mangled = this.parentLabel + "$$" + name;
+            final String mangled = parent + "$$" + name;
             var = this.variables.get(mangled);
             if (var == null)
             {
@@ -318,11 +328,12 @@ public class Assembler
         Variable var;
         if (name.startsWith("_"))
         {
-            if (this.parentLabel == null)
+            final String parent = name.startsWith("__") ? this.macroParentLabel : this.parentLabel;
+            if (parent == null)
             {
-                throw new AssemblerException(null, "Local variable '" + name + "'without parent");
+                throw new AssemblerException(null, "Local variable '" + name + "' without parent");
             }
-            var = this.variables.get(this.parentLabel + "$$" + name);
+            var = this.variables.get(parent + "$$" + name);
         }
         else
         {
@@ -500,6 +511,7 @@ public class Assembler
             }
             // Gather all declared variables and labels
             String lastLabel = null;
+            String lastMacroLabel = null;
             for (final Action action : actions)
             {
                 currentAction = action;
@@ -508,12 +520,13 @@ public class Assembler
                     String varName = ((SetVariableAction)action).getVariableName();
                     if (varName.startsWith("_"))
                     {
-                        if (lastLabel == null)
+                        final String parent = varName.startsWith("__") ? lastMacroLabel : lastLabel;
+                        if (parent == null)
                         {
                             throw new AssemblerException(action.getLocation(),
-                                    "Local label defined without parent label");
+                                    "Macro label defined without parent label");
                         }
-                        varName = lastLabel + "$$" + varName;
+                        varName = parent + "$$" + varName;
                     }
                     if (this.labels.containsKey(varName))
                     {
@@ -531,16 +544,24 @@ public class Assembler
 
                     if (labelName.startsWith("_"))
                     {
-                        if (lastLabel == null)
+                        final String parent = labelName.startsWith("__") ? lastMacroLabel : lastLabel;
+                        if (parent == null)
                         {
                             throw new AssemblerException(action.getLocation(),
                                     "Local label defined without parent label");
                         }
-                        labelName = lastLabel + "$$" + labelName;
+                        labelName = parent + "$$" + labelName;
                     }
                     else
                     {
-                        lastLabel = labelName;
+                        if (isMacroLabel(labelName))
+                        {
+                            lastMacroLabel = labelName;
+                        }
+                        else
+                        {
+                            lastLabel = labelName;
+                        }
                     }
 
                     if (this.variables.containsKey(labelName))

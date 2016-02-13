@@ -40,6 +40,16 @@ public class ConditionalJumpAction extends Action
         }
     }
 
+    public int getID()
+    {
+        return this.jumpId;
+    }
+
+    public ConditionalJumpAction mangle(final int jid)
+    {
+        return new ConditionalJumpAction(this.getLocation(), jid);
+    }
+
     @Override
     public String toString()
     {

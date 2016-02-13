@@ -24,11 +24,13 @@ import com.github.rjeschke.cetoneasm.FileLocation;
 public class StoreDataAction extends Action
 {
     private final boolean storeWord;
+    private final boolean isCode;
 
-    public StoreDataAction(final FileLocation location, final boolean storeWord)
+    public StoreDataAction(final FileLocation location, final boolean storeWord, final boolean isCode)
     {
         super(location);
         this.storeWord = storeWord;
+        this.isCode = isCode;
     }
 
     @Override
@@ -41,7 +43,14 @@ public class StoreDataAction extends Action
         }
         else
         {
-            assembler.emmitDataByte(value);
+            if (this.isCode)
+            {
+                assembler.emmitByte(value);
+            }
+            else
+            {
+                assembler.emmitDataByte(value);
+            }
         }
     }
 

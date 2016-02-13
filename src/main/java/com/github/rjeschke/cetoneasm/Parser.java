@@ -117,6 +117,7 @@ public class Parser
         final FileLocation ds = this.getFileLocation();
         final boolean isRep = mc == MetaCommand.REPB || mc == MetaCommand.REPW;
         final boolean isWord = mc == MetaCommand.DW || mc == MetaCommand.REPW;
+        final boolean isCode = mc == MetaCommand.CB;
         int cid = 0;
         JumpIdAction start = null, end = null;
 
@@ -148,7 +149,7 @@ public class Parser
             else
             {
                 actions.addAll(this.parseExpression());
-                actions.add(new StoreDataAction(efl, isWord));
+                actions.add(new StoreDataAction(efl, isWord, isCode));
             }
             if (this.peek().getType() == Token.Type.COMMA)
             {
@@ -445,6 +446,7 @@ public class Parser
         case ENDWHILE:
             throw new AssemblerException(this.getFileLocation(), "ENDWHILE without WHILE");
         case DB:
+        case CB:
         case DW:
         case REPB:
         case REPW:

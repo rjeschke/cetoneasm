@@ -40,6 +40,21 @@ public class CounterDecrementAction extends Action
         assembler.setJump(this.jumpId);
     }
 
+    public int getCID()
+    {
+        return this.id;
+    }
+
+    public int getJID()
+    {
+        return this.jumpId;
+    }
+
+    public CounterDecrementAction mangle(final int cid, final int jid)
+    {
+        return new CounterDecrementAction(this.getLocation(), cid, jid);
+    }
+
     @Override
     public String toString()
     {

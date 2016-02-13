@@ -17,19 +17,23 @@
 package com.github.rjeschke.cetoneasm.actions;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 
 import com.github.rjeschke.cetoneasm.Action;
 import com.github.rjeschke.cetoneasm.AssemblerException;
+import com.github.rjeschke.cetoneasm.CounterState;
 import com.github.rjeschke.cetoneasm.FileLocation;
 import com.github.rjeschke.cetoneasm.MetaAction;
 
 public class DefineMacroAction extends MetaAction
 {
-    private final String       name;
-    private final List<String> arguments;
-    private final List<Action> actions;
+    private final String           name;
+    private final List<String>     arguments;
+    private final List<Action>     actions;
+    private final HashSet<Integer> jumpIds    = new HashSet<Integer>();
+    private final HashSet<Integer> counterIds = new HashSet<Integer>();
 
     public DefineMacroAction(final FileLocation location, final String name, final List<String> arguments,
             final List<Action> actions)
@@ -107,6 +111,15 @@ public class DefineMacroAction extends MetaAction
         for (final Action a : this.actions)
         {
             mangle(a, def);
+
+            if (a instanceof JumpIdAction)
+            {
+                this.jumpIds.add(((JumpIdAction)a).getID());
+            }
+            else if (a instanceof CounterSetAction)
+            {
+                this.counterIds.add(((CounterSetAction)a).getID());
+            }
         }
 
         for (int i = 0; i < this.arguments.size(); i++)
@@ -135,7 +148,57 @@ public class DefineMacroAction extends MetaAction
             ret.add(new SetVariableAction(this.getLocation(), this.arguments.get(i)));
         }
 
-        ret.addAll(this.actions);
+        final HashMap<Integer, Integer> cidMap = new HashMap<Integer, Integer>();
+        final HashMap<Integer, Integer> jidMap = new HashMap<Integer, Integer>();
+
+        for (final Integer i : this.counterIds)
+        {
+            cidMap.put(i, CounterState.get().newId());
+        }
+
+        for (final Integer i : this.jumpIds)
+        {
+            jidMap.put(i, CounterState.get().newJumpId());
+        }
+
+        final ArrayList<Action> as = new ArrayList<Action>(this.actions);
+
+        for (int i = 0; i < as.size(); i++)
+        {
+            final Action a = as.get(i);
+            if (a instanceof JumpIdAction)
+            {
+                final JumpIdAction b = (JumpIdAction)a;
+                as.set(i, b.mangle(jidMap.get(b.getID()).intValue()));
+            }
+            else if (a instanceof JumpToIdAction)
+            {
+                final JumpToIdAction b = (JumpToIdAction)a;
+                as.set(i, b.mangle(jidMap.get(b.getID()).intValue()));
+            }
+            else if (a instanceof ConditionalJumpAction)
+            {
+                final ConditionalJumpAction b = (ConditionalJumpAction)a;
+                as.set(i, b.mangle(jidMap.get(b.getID()).intValue()));
+            }
+            else if (a instanceof CounterSetAction)
+            {
+                final CounterSetAction b = (CounterSetAction)a;
+                as.set(i, b.mangle(cidMap.get(b.getID()).intValue()));
+            }
+            else if (a instanceof CounterCompareAction)
+            {
+                final CounterCompareAction b = (CounterCompareAction)a;
+                as.set(i, b.mangle(cidMap.get(b.getCID()).intValue(), jidMap.get(b.getJID()).intValue()));
+            }
+            else if (a instanceof CounterDecrementAction)
+            {
+                final CounterDecrementAction b = (CounterDecrementAction)a;
+                as.set(i, b.mangle(cidMap.get(b.getCID()).intValue(), jidMap.get(b.getJID()).intValue()));
+            }
+        }
+
+        ret.addAll(as);
 
         return ret;
     }

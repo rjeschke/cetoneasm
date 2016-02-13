@@ -42,6 +42,11 @@ public class CounterSetAction extends Action
         return this.id;
     }
 
+    public CounterSetAction mangle(final int cid)
+    {
+        return new CounterSetAction(this.getLocation(), cid);
+    }
+
     @Override
     public String toString()
     {

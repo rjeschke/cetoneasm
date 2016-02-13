@@ -23,6 +23,7 @@ public enum MetaCommand
     INCLUDE,
     BINCLUDE,
     DB,
+    CB,
     DW,
     REPB,
     REPW,

@@ -61,6 +61,7 @@
                     <prefix>\.(?i)\b</prefix>
                     <keyword>INCLUDE</keyword>
                     <keyword>BINCLUDE</keyword>
+                    <keyword>CB</keyword>
                     <keyword>DB</keyword>
                     <keyword>DW</keyword>
                     <keyword>REPB</keyword>

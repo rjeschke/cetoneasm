@@ -42,6 +42,21 @@ public class CounterCompareAction extends Action
         }
     }
 
+    public int getCID()
+    {
+        return this.id;
+    }
+
+    public int getJID()
+    {
+        return this.jumpId;
+    }
+
+    public CounterCompareAction mangle(final int cid, final int jid)
+    {
+        return new CounterCompareAction(this.getLocation(), cid, jid);
+    }
+
     @Override
     public String toString()
     {

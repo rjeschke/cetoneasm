@@ -30,9 +30,20 @@ public class JumpIdAction extends MetaAction
         this.id = CounterState.get().newJumpId();
     }
 
+    private JumpIdAction(final FileLocation location, final int jid)
+    {
+        super(location);
+        this.id = jid;
+    }
+
     public int getID()
     {
         return this.id;
+    }
+
+    public JumpIdAction mangle(final int jid)
+    {
+        return new JumpIdAction(this.location, jid);
     }
 
     @Override

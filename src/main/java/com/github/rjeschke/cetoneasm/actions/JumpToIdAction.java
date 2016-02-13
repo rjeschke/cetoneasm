@@ -37,6 +37,16 @@ public class JumpToIdAction extends Action
         assembler.setJump(this.jumpId);
     }
 
+    public int getID()
+    {
+        return this.jumpId;
+    }
+
+    public JumpToIdAction mangle(final int jid)
+    {
+        return new JumpToIdAction(this.getLocation(), jid);
+    }
+
     @Override
     public String toString()
     {
