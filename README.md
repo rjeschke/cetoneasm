@@ -4,9 +4,7 @@ cetoneasm - A C64 (Cross) Macro Assembler
 TODO:
 --
 * configuration file
-* server mode *(?)*
 * endless loop detection (detection implemented, now handle it)
-* `.CONST` *(?)*
 
 
 Number literals:

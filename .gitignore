@@ -13,4 +13,5 @@ target/
 *.dll
 \#*
 *\#
+dependency-reduced-pom.xml
 
