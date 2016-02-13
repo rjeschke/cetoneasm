@@ -773,6 +773,7 @@ public class Parser
                     {
                         throw new AssemblerException(opfl, "Illegal addressing mode, 'X' or 'Y' expected");
                     }
+                    this.consume();
                 }
                 else
                 {
@@ -916,6 +917,7 @@ public class Parser
                 this.consume();
                 break;
             case WORD:
+            case SUB_WORD:
             case PC:
                 this.parseAssigment(actions);
                 break;

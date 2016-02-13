@@ -92,6 +92,13 @@ public class Machine
         this.verbose = verbose;
         this.extraVerbose = extraVerbose;
         final StringBuilder line = new StringBuilder();
+
+        if(verbose)
+        {
+            Con.info("    clock  PC   A  X  Y SP NVxBDIZC bytes    opcode");
+            Con.info("--------------------------------------------------------");
+        }
+
         for (;;)
         {
             if (verbose && this.cpu.getCycle() == 0)
