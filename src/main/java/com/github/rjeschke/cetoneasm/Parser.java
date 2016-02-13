@@ -571,7 +571,7 @@ public class Parser
             for (;;)
             {
                 final BinaryOperator bop = BinaryOperator.fromToken(this.peek());
-                if (bop == null || bop.getPriority() < prio)
+                if (bop == null || bop.getPriority() <= prio)
                 {
                     break;
                 }
