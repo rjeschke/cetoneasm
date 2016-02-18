@@ -280,7 +280,23 @@ public class Parser
     private void parseRep(final List<Action> actions) throws AssemblerException
     {
         final FileLocation fl = this.getFileLocation();
+        String incVarName = null;
+
         actions.addAll(this.parseExpression());
+
+        if (this.peek().getType() == Token.Type.COMMA)
+        {
+            this.consume();
+            if (this.peek().getType() != Token.Type.WORD && this.peek().getType() != Token.Type.SUB_WORD)
+            {
+                throw new AssemblerException(this.getFileLocation(), "Identifier expected");
+            }
+            incVarName = this.getStringValue();
+            this.consume();
+            actions.add(new LoadNumberAction(fl, 0));
+            actions.add(new SetVariableAction(fl, incVarName));
+        }
+
         final int cid = CounterState.get().newId();
         final JumpIdAction start = new JumpIdAction(fl);
         final JumpIdAction end = new JumpIdAction(fl);
@@ -288,6 +304,15 @@ public class Parser
         actions.add(start);
         actions.add(new CounterCompareAction(fl, cid, end.getID()));
         this.parse(actions, "ENDREP");
+
+        if (incVarName != null)
+        {
+            actions.add(new GetVariableAction(fl, incVarName));
+            actions.add(new LoadNumberAction(fl, 1));
+            actions.add(new BinaryOperatorAction(fl, BinaryOperator.ADD));
+            actions.add(new SetVariableAction(fl, incVarName));
+        }
+
         actions.add(new CounterDecrementAction(this.getFileLocation(), cid, start.getID()));
         actions.add(end);
         if (this.peek().getType() != Token.Type.META || !"ENDREP".equals(this.getStringValue()))
